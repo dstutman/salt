@@ -57,8 +57,7 @@ risks_0 = np.array([["LD01",  0, 5],
                       ["TE02", 20, 4],
                       ["TE03", 0, 5],
                       ["TE04", 0, 5],
-                      ["TE05", 0, 4],
-                      ["01", 60, 3]], dtype=object)
+                      ["TE05", 0, 4]], dtype=object)
 
 
 # risks_1 = np.zeros(np.shape(risks_0),dtype=object)
@@ -95,11 +94,6 @@ risks_1[:, 1:] = np.array([[0, 3],   # ld01
                           [20, 2],   # ld04
                           [0, 2],    # ld05
                           [20, 2],   # ld06
-                          [ 0, 3],   # te01
-                          [ 0, 1],   # te02
-                          [ 0, 3],   # te03
-                          [ 0, 2],   # te04
-                          [ 0, 2],   # te05
                           [ 0, 3],   # ops01
                           [ 0, 3],   # ops02
                           [ 20, 2],   # ops03
@@ -113,7 +107,12 @@ risks_1[:, 1:] = np.array([[0, 3],   # ld01
                           [ 0, 3],   # opt03
                           [ 20, 3],   # pl01
                           [ 40, 3],   # pl02
-                          [0, 2]])   # pl03
+                          [0, 2],    # pl03
+                          [ 0, 3],   # te01
+                          [ 0, 1],   # te02
+                          [ 0, 3],   # te03
+                          [ 0, 2],   # te04
+                          [ 0, 2]])  # te05
 
 
 vgrid = np.meshgrid(probs,impacts)
