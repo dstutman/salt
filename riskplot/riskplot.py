@@ -130,23 +130,41 @@ for j,tile in enumerate(vgrid[0][0:-1]):
 plt.hlines([3,2,1], [20,40,60], [40,60,100], linewidth=perimeterthickness,  zorder=4)
 plt.vlines([20,40,60], [3,2,1], [5,3,2], linewidth=perimeterthickness, zorder=4)
 
-# risks_0
+# # risks_0
+# for impact in impacts:
+#     for prob in probs:
+#         risksorderlist = np.where(risks_0[:,2]==impact-0.5)[0]
+#         probsorderlist = np.where(risks_0[risksorderlist,1]==prob+3)[0]
+#         order = 0.35 - np.linspace(0,np.size(probsorderlist),np.size(probsorderlist))/(np.size(probsorderlist)*1.5)
+#         risks_0[risksorderlist[probsorderlist],2] = risks_0[risksorderlist[probsorderlist],2] + order
+#
+# # risks_1
+# for impact in impacts:
+#     for prob in probs:
+#         risksorderlist = np.where(risks_1[:,2]==impact-0.5)[0]
+#         probsorderlist = np.where(risks_1[risksorderlist,1]==prob+3)[0]
+#         order = 0.35 - np.linspace(0,np.size(probsorderlist),np.size(probsorderlist))/(np.size(probsorderlist)*1.5)
+#         risks_1[risksorderlist[probsorderlist],2] = risks_1[risksorderlist[probsorderlist],2] + order
+#
+# plt.scatter(risks_0[:,1], risks_0[:,2], marker="X", c = "k", zorder=6)
+
+# risks_th_0
 for impact in impacts:
     for prob in probs:
-        risksorderlist = np.where(risks_0[:,2]==impact-0.5)[0]
-        probsorderlist = np.where(risks_0[risksorderlist,1]==prob+3)[0]
+        risksorderlist = np.where(risks_th_0[:,2]==impact-0.5)[0]
+        probsorderlist = np.where(risks_th_0[risksorderlist,1]==prob+3)[0]
         order = 0.35 - np.linspace(0,np.size(probsorderlist),np.size(probsorderlist))/(np.size(probsorderlist)*1.5)
-        risks_0[risksorderlist[probsorderlist],2] = risks_0[risksorderlist[probsorderlist],2] + order
+        risks_th_0[risksorderlist[probsorderlist],2] = risks_th_0[risksorderlist[probsorderlist],2] + order
 
-# risks_1
+# risks_th_1
 for impact in impacts:
     for prob in probs:
-        risksorderlist = np.where(risks_1[:,2]==impact-0.5)[0]
-        probsorderlist = np.where(risks_1[risksorderlist,1]==prob+3)[0]
+        risksorderlist = np.where(risks_th_1[:,2]==impact-0.5)[0]
+        probsorderlist = np.where(risks_th_1[risksorderlist,1]==prob+3)[0]
         order = 0.35 - np.linspace(0,np.size(probsorderlist),np.size(probsorderlist))/(np.size(probsorderlist)*1.5)
-        risks_1[risksorderlist[probsorderlist],2] = risks_1[risksorderlist[probsorderlist],2] + order
+        risks_th_1[risksorderlist[probsorderlist],2] = risks_th_1[risksorderlist[probsorderlist],2] + order
 
-plt.scatter(risks_0[:,1], risks_0[:,2], marker="X", c = "k", zorder=6)
+plt.scatter(risks_th_0[:,1], risks_th_0[:,2], marker="X", c = "k", zorder=6)
 
 
 for i,risk in enumerate(risks_0[:,0]):
