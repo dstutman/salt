@@ -32,9 +32,24 @@ risks_0 = np.array([["C01", 60, 3],
                     ["HS05", 80, 4],
                     ["HS06", 0, 4]], dtype=object)
 
+# technical risks
+risks_th_0 = np.array([["LD01",  0, 5],
+                      ["LD02", 40, 5],
+                      ["LD03", 40, 4],
+                      ["LD04", 40, 4],
+                      ["LD05", 60, 5],
+                      ["LD06", 40, 4],
+                      ["TE01", 20, 4],
+                      ["TE02", 20, 4],
+                      ["TE03", 0, 5],
+                      ["TE04", 0, 5],
+                      ["TE05", 0, 4],
+                      ["01", 60, 3]], dtype=object)
+
+
 risks_1 = np.zeros(np.shape(risks_0),dtype=object)
-risks_1[:,0] = risks_0[:,0]
-risks_1[:,1:] = np.array([[20,3],   # c01
+risks_1[:, 0] = risks_0[:, 0]
+risks_1[:, 1:] = np.array([[20,3],   # c01
                           [0,3],    # c02
                           [40,1],   # c03
                           [0,3],    # c04
@@ -55,7 +70,24 @@ risks_1[:,1:] = np.array([[20,3],   # c01
                           [0,4],    # hs03
                           [20,2],   # hs04
                           [20,3],   # hs05
-                          [0,2]])   # hs06
+                          [0,2]])   #
+
+#technical risks
+risks_th_1 = np.zeros(np.shape(risks_th_0),dtype=object)
+risks_th_1[:, 0] = risks_th_0[:, 0]
+risks_th_1[:, 1:] = np.array([[0, 3],   # ld01
+                          [ 0, 3],    # ld02
+                          [40, 2],   # ld03
+                          [20, 2],   # ld04
+                          [0, 2],    # ld05
+                          [20, 2],   # ld06
+                          [ 0, 3],   # te01
+                          [ 0, 1],   # te02
+                          [ 0, 3],   # te03
+                          [ 0, 2],   # te04
+                          [ 0, 2],   # te05
+                          [0, 2]])
+
 
 vgrid = np.meshgrid(probs,impacts)
 hgrid = np.meshgrid(impacts, probs)
@@ -119,6 +151,10 @@ plt.scatter(risks_0[:,1], risks_0[:,2], marker="X", c = "k", zorder=6)
 
 for i,risk in enumerate(risks_0[:,0]):
     plt.text(x=risks_0[i,1]+1.3, y=risks_0[i,2]-0.05, s=risk, fontsize="large", zorder=6)
+
+# risks_technical
+
+
 
 # plt.scatter(risks_1[:,1], risks_1[:,2], marker="X", c = "k", zorder=6)
 #
