@@ -9,31 +9,31 @@ unurgency_rate = 10
 linestrength = 0.2
 perimeterthickness = 1.2
 
-risks_0 = np.array([["C01", 60, 3],
-                    ["C02", 40, 5],
-                    ["C03", 60, 3],
-                    ["C04", 20, 3],
-                    ["HR01", 40, 3],
-                    ["HR02", 40, 4],
-                    ["HR03", 40, 4],
-                    ["HR04", 20, 4],
-                    ["HR05", 40, 3],
-                    ["HR06", 0, 4],
-                    ["M01", 60, 5],
-                    ["M02", 40, 3],
-                    ["M03", 20, 4],
-                    ["M04", 40, 4],
-                    ["M05", 0, 4],
-                    ["M06", 60, 5],
-                    ["HS01", 20, 4],
-                    ["HS02", 40, 5],
-                    ["HS03", 20, 4],
-                    ["HS04", 40, 4],
-                    ["HS05", 80, 4],
-                    ["HS06", 0, 4]], dtype=object)
+# risks_0 = np.array([["C01", 60, 3],
+#                     ["C02", 40, 5],
+#                     ["C03", 60, 3],
+#                     ["C04", 20, 3],
+#                     ["HR01", 40, 3],
+#                     ["HR02", 40, 4],
+#                     ["HR03", 40, 4],
+#                     ["HR04", 20, 4],
+#                     ["HR05", 40, 3],
+#                     ["HR06", 0, 4],
+#                     ["M01", 60, 5],
+#                     ["M02", 40, 3],
+#                     ["M03", 20, 4],
+#                     ["M04", 40, 4],
+#                     ["M05", 0, 4],
+#                     ["M06", 60, 5],
+#                     ["HS01", 20, 4],
+#                     ["HS02", 40, 5],
+#                     ["HS03", 20, 4],
+#                     ["HS04", 40, 4],
+#                     ["HS05", 80, 4],
+#                     ["HS06", 0, 4]], dtype=object)
 
 # technical risks
-risks_th_0 = np.array([["LD01",  0, 5],
+risks_0 = np.array([["LD01",  0, 5],
                       ["LD02", 40, 5],
                       ["LD03", 40, 4],
                       ["LD04", 40, 4],
@@ -47,35 +47,35 @@ risks_th_0 = np.array([["LD01",  0, 5],
                       ["01", 60, 3]], dtype=object)
 
 
-risks_1 = np.zeros(np.shape(risks_0),dtype=object)
-risks_1[:, 0] = risks_0[:, 0]
-risks_1[:, 1:] = np.array([[20,3],   # c01
-                          [0,3],    # c02
-                          [40,1],   # c03
-                          [0,3],    # c04
-                          [20,1],   # hr01
-                          [0,4],    # hr02
-                          [20,3],   # hr03
-                          [0,1],    # hr04
-                          [20,3],   # hr05
-                          [0,2],    # hr06
-                          [40,2],   # m01
-                          [20,2],   # m02
-                          [0,3],    # m03
-                          [0,4],    # m04
-                          [0,3],    # m05
-                          [40,2],   # m06
-                          [20,2],   # hs01
-                          [20,3],   # hs02
-                          [0,4],    # hs03
-                          [20,2],   # hs04
-                          [20,3],   # hs05
-                          [0,2]])   #
+# risks_1 = np.zeros(np.shape(risks_0),dtype=object)
+# risks_1[:, 0] = risks_0[:, 0]
+# risks_1[:, 1:] = np.array([[20,3],   # c01
+#                           [0,3],    # c02
+#                           [40,1],   # c03
+#                           [0,3],    # c04
+#                           [20,1],   # hr01
+#                           [0,4],    # hr02
+#                           [20,3],   # hr03
+#                           [0,1],    # hr04
+#                           [20,3],   # hr05
+#                           [0,2],    # hr06
+#                           [40,2],   # m01
+#                           [20,2],   # m02
+#                           [0,3],    # m03
+#                           [0,4],    # m04
+#                           [0,3],    # m05
+#                           [40,2],   # m06
+#                           [20,2],   # hs01
+#                           [20,3],   # hs02
+#                           [0,4],    # hs03
+#                           [20,2],   # hs04
+#                           [20,3],   # hs05
+#                           [0,2]])   #
 
 #technical risks
-risks_th_1 = np.zeros(np.shape(risks_th_0),dtype=object)
-risks_th_1[:, 0] = risks_th_0[:, 0]
-risks_th_1[:, 1:] = np.array([[0, 3],   # ld01
+risks_1 = np.zeros(np.shape(risks_0),dtype=object)
+risks_1[:, 0] = risks_0[:, 0]
+risks_1[:, 1:] = np.array([[0, 3],   # ld01
                           [ 0, 3],    # ld02
                           [40, 2],   # ld03
                           [20, 2],   # ld04
@@ -151,10 +151,6 @@ plt.scatter(risks_0[:,1], risks_0[:,2], marker="X", c = "k", zorder=6)
 
 for i,risk in enumerate(risks_0[:,0]):
     plt.text(x=risks_0[i,1]+1.3, y=risks_0[i,2]-0.05, s=risk, fontsize="large", zorder=6)
-
-# risks_technical
-
-
 
 # plt.scatter(risks_1[:,1], risks_1[:,2], marker="X", c = "k", zorder=6)
 #
