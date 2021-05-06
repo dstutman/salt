@@ -2,7 +2,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 import seaborn as sns
 
-probs = np.array([0,20,40,60,80,100])
+probs = np.array([0,10,30,50,70,100])
 impacts = np.array([0,1,2,3,4,5])
 urgency_rate = 2.5
 unurgency_rate = 10
@@ -34,27 +34,28 @@ perimeterthickness = 1.2
 
 # technical risks
 risks_0 = np.array([["LD01",  0, 5],
-                      ["LD02", 40, 5],
-                      ["LD03", 40, 4],
-                      ["LD04", 40, 4],
+                      ["LD02", 30, 5],
+                      ["LD03", 30, 4],
+                      ["LD04", 30, 4],
                       ["LD05", 0, 5],
-                      ["LD06", 40, 4],
+                      ["LD06", 30, 4],
+                      ["LD07", 30, 5],
                       ["OPS01", 0, 5],
                       ["OPS02", 0, 5],
-                      ["OPS03", 20, 4],
-                      ["OPS04", 20, 4],
+                      ["OPS03", 10, 4],
+                      ["OPS04", 10, 4],
                       ["OPS05", 0, 3],
-                      ["OPS06", 20, 5],
-                      ["OPS07", 20, 5],
+                      ["OPS06", 10, 5],
+                      ["OPS07", 10, 5],
                       ["OPS08", 0, 5],
-                      ["OPT01", 20, 5],
-                      ["OPT02", 20, 5],
+                      ["OPT01", 10, 5],
+                      ["OPT02", 10, 5],
                       ["OPT03", 0, 5],
-                      ["PL01", 60, 5],
-                      ["PL02", 80, 5],
-                      ["PL03", 20, 5],
-                      ["TE01", 20, 4],
-                      ["TE02", 20, 4],
+                      ["PL01", 50, 5],
+                      ["PL02", 70, 5],
+                      ["PL03", 10, 5],
+                      ["TE01", 10, 4],
+                      ["TE02", 10, 4],
                       ["TE03", 0, 5],
                       ["TE04", 0, 5],
                       ["TE05", 0, 4]], dtype=object)
@@ -90,23 +91,24 @@ risks_1 = np.zeros(np.shape(risks_0),dtype=object)
 risks_1[:, 0] = risks_0[:, 0]
 risks_1[:, 1:] = np.array([[0, 3],   # ld01
                           [ 0, 3],   # ld02
-                          [40, 2],   # ld03
-                          [20, 2],   # ld04
+                          [30, 2],   # ld03
+                          [10, 2],   # ld04
                           [0, 2],    # ld05
-                          [20, 2],   # ld06
+                          [10, 2],   # ld06
+                          [0, 1],   # ld07
                           [ 0, 3],   # ops01
                           [ 0, 3],   # ops02
-                          [ 20, 2],   # ops03
-                          [ 20, 3],   # ops04
+                          [ 10, 2],   # ops03
+                          [ 10, 3],   # ops04
                           [ 0, 1],   # ops05
-                          [ 20, 3],   # ops06
-                          [ 20, 2],   # ops07
+                          [ 10, 3],   # ops06
+                          [ 10, 2],   # ops07
                           [ 0, 4],   # ops08
-                          [ 20, 2],   # opt01
+                          [ 10, 2],   # opt01
                           [ 0, 5],   # opt02
                           [ 0, 3],   # opt03
-                          [ 20, 3],   # pl01
-                          [ 40, 3],   # pl02
+                          [ 10, 3],   # pl01
+                          [ 30, 2],   # pl02
                           [0, 2],    # pl03
                           [ 0, 3],   # te01
                           [ 0, 1],   # te02
@@ -126,7 +128,6 @@ risks_1[:,2] = risks_1[:,2] - 0.5
 
 
 sns.set_theme()
-plt.title("Risk Map of Unmitigated Risks", fontsize="x-large")
 plt.ylim(0,np.max(impacts))
 plt.xlim(0, np.max(probs))
 plt.plot(vgrid[0],vgrid[1], c = "k", ls = "-.", alpha = linestrength, zorder=4)
@@ -153,8 +154,8 @@ for j,tile in enumerate(vgrid[0][0:-1]):
                  zorder=4)
 
 # unacceptable region
-plt.hlines([3,2,1], [20,40,60], [40,60,100], linewidth=perimeterthickness,  zorder=4)
-plt.vlines([20,40,60], [3,2,1], [5,3,2], linewidth=perimeterthickness, zorder=4)
+plt.hlines([3,2,1], [10,30,50], [30,50,100], linewidth=perimeterthickness,  zorder=4)
+plt.vlines([10,30,50], [3,2,1], [5,3,2], linewidth=perimeterthickness, zorder=4)
 
 # risks_0
 for impact in impacts:
@@ -172,17 +173,17 @@ for impact in impacts:
         order = 0.35 - np.linspace(0,np.size(probsorderlist),np.size(probsorderlist))/(np.size(probsorderlist)*1.5)
         risks_1[risksorderlist[probsorderlist],2] = risks_1[risksorderlist[probsorderlist],2] + order
 
-plt.scatter(risks_0[:,1], risks_0[:,2], marker="X", c = "k", zorder=6)
 
-
-
-for i,risk in enumerate(risks_0[:,0]):
-    plt.text(x=risks_0[i,1]+1.3, y=risks_0[i,2]-0.05, s=risk, fontsize="large", zorder=6)
-
-# plt.scatter(risks_1[:,1], risks_1[:,2], marker="X", c = "k", zorder=6)
+# plt.scatter(risks_0[:,1], risks_0[:,2], marker="X", c = "k", zorder=6)
+# plt.title("Risk Map of Unmitigated Risks", fontsize="x-large")
 #
-#
-# for i,risk in enumerate(risks_1[:,0]):
-#     plt.text(x=risks_1[i,1]+1.3, y=risks_1[i,2]-0.05, s=risk, fontsize="large", zorder=6)
+# for i,risk in enumerate(risks_0[:,0]):
+#     plt.text(x=risks_0[i,1]+1.3, y=risks_0[i,2]-0.05, s=risk, fontsize="large", zorder=6)
+
+plt.scatter(risks_1[:,1], risks_1[:,2], marker="X", c = "k", zorder=6)
+plt.title("Risk Map of Mitigated Risks", fontsize="x-large")
+
+for i,risk in enumerate(risks_1[:,0]):
+    plt.text(x=risks_1[i,1]+1.3, y=risks_1[i,2]-0.05, s=risk, fontsize="large", zorder=6)
 
 plt.show()
