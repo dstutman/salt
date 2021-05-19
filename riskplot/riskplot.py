@@ -4,7 +4,7 @@ import seaborn as sns
 
 probs = np.array([0,10,30,50,70,100])
 impacts = np.array([0,1,2,3,4,5])
-urgency_rate = 2.5
+urgency_rate = 3
 unurgency_rate = 10
 linestrength = 0.2
 perimeterthickness = 1.2
@@ -48,6 +48,8 @@ risks_0 = np.array([["LD01",  0, 5],
                       ["OPS06", 10, 5],
                       ["OPS07", 10, 5],
                       ["OPS08", 0, 5],
+                      ["OPS09", 30, 5],
+                      ["OPS10", 0, 5],
                       ["OPT01", 10, 5],
                       ["OPT02", 10, 5],
                       ["OPT03", 0, 5],
@@ -104,6 +106,8 @@ risks_1[:, 1:] = np.array([[0, 3],   # ld01
                           [ 10, 3],   # ops06
                           [ 10, 2],   # ops07
                           [ 0, 4],   # ops08
+                          [0, 4],   # ops09
+                          [0, 4],   # ops10
                           [ 10, 2],   # opt01
                           [ 0, 5],   # opt02
                           [ 0, 3],   # opt03
@@ -128,6 +132,8 @@ risks_1[:,2] = risks_1[:,2] - 0.5
 
 
 sns.set_theme()
+plt.xticks(probs)
+plt.yticks(impacts)
 plt.ylim(0,np.max(impacts))
 plt.xlim(0, np.max(probs))
 plt.plot(vgrid[0],vgrid[1], c = "k", ls = "-.", alpha = linestrength, zorder=4)
@@ -139,8 +145,8 @@ for j,tile in enumerate(vgrid[0][0:-1]):
     for i,x in enumerate(tile[0:-1]):
         x1 = x
         x2 = tile[i+1]
-        y1 = vgrid[1][j,i]
-        y2 = vgrid[1][j+1,i]
+        y1 = vgrid[1][j, i]
+        y2 = vgrid[1][j+1, i]
 
         # red zone
         plt.fill([x1,x1,x2,x2],[y1,y2,y2,y1],c="r",alpha=((x2*y2)/
@@ -162,7 +168,10 @@ for impact in impacts:
     for prob in probs:
         risksorderlist = np.where(risks_0[:,2]==impact-0.5)[0]
         probsorderlist = np.where(risks_0[risksorderlist,1]==prob+3)[0]
-        order = 0.35 - np.linspace(0,np.size(probsorderlist),np.size(probsorderlist))/(np.size(probsorderlist)*1.5)
+        if np.size(probsorderlist) >= 9:
+            order = 0.43 - np.linspace(0,np.size(probsorderlist),np.size(probsorderlist))/(np.size(probsorderlist)*1.15)
+        else:
+            order = 0.35 - np.linspace(0,np.size(probsorderlist),np.size(probsorderlist))/(np.size(probsorderlist)*1.3)
         risks_0[risksorderlist[probsorderlist],2] = risks_0[risksorderlist[probsorderlist],2] + order
 
 # risks_1
@@ -170,20 +179,20 @@ for impact in impacts:
     for prob in probs:
         risksorderlist = np.where(risks_1[:,2]==impact-0.5)[0]
         probsorderlist = np.where(risks_1[risksorderlist,1]==prob+3)[0]
-        order = 0.35 - np.linspace(0,np.size(probsorderlist),np.size(probsorderlist))/(np.size(probsorderlist)*1.5)
+        order = 0.35 - np.linspace(0,np.size(probsorderlist),np.size(probsorderlist))/(np.size(probsorderlist)*1.3)
         risks_1[risksorderlist[probsorderlist],2] = risks_1[risksorderlist[probsorderlist],2] + order
 
 
-# plt.scatter(risks_0[:,1], risks_0[:,2], marker="X", c = "k", zorder=6)
-# plt.title("Risk Map of Unmitigated Risks", fontsize="x-large")
+plt.scatter(risks_0[:,1], risks_0[:,2], marker="X", c = "k", zorder=6)
+plt.title("Risk Map of Unmitigated Risks", fontsize="x-large")
+
+for i,risk in enumerate(risks_0[:,0]):
+    plt.text(x=risks_0[i,1]+1.3, y=risks_0[i,2]-0.05, s=risk, fontsize="large", zorder=6)
+
+# plt.scatter(risks_1[:,1], risks_1[:,2], marker="X", c = "k", zorder=6)
+# plt.title("Risk Map of Mitigated Risks", fontsize="x-large")
 #
-# for i,risk in enumerate(risks_0[:,0]):
-#     plt.text(x=risks_0[i,1]+1.3, y=risks_0[i,2]-0.05, s=risk, fontsize="large", zorder=6)
-
-plt.scatter(risks_1[:,1], risks_1[:,2], marker="X", c = "k", zorder=6)
-plt.title("Risk Map of Mitigated Risks", fontsize="x-large")
-
-for i,risk in enumerate(risks_1[:,0]):
-    plt.text(x=risks_1[i,1]+1.3, y=risks_1[i,2]-0.05, s=risk, fontsize="large", zorder=6)
+# for i,risk in enumerate(risks_1[:,0]):
+#     plt.text(x=risks_1[i,1]+1.3, y=risks_1[i,2]-0.05, s=risk, fontsize="large", zorder=6)
 
 plt.show()
