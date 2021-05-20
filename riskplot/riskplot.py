@@ -50,6 +50,7 @@ risks_0 = np.array([["LD01",  0, 5],
                       ["OPS08", 0, 5],
                       ["OPS09", 30, 5],
                       ["OPS10", 0, 5],
+                      ["OPS11", 70, 4],
                       ["OPT01", 10, 5],
                       ["OPT02", 10, 5],
                       ["OPT03", 0, 5],
@@ -108,6 +109,7 @@ risks_1[:, 1:] = np.array([[0, 3],   # ld01
                           [ 0, 4],   # ops08
                           [0, 4],   # ops09
                           [0, 4],   # ops10
+                          [30, 2],   # ops11
                           [ 10, 2],   # opt01
                           [ 0, 5],   # opt02
                           [ 0, 3],   # opt03
@@ -183,16 +185,16 @@ for impact in impacts:
         risks_1[risksorderlist[probsorderlist],2] = risks_1[risksorderlist[probsorderlist],2] + order
 
 
-plt.scatter(risks_0[:,1], risks_0[:,2], marker="X", c = "k", zorder=6)
-plt.title("Risk Map of Unmitigated Risks", fontsize="x-large")
-
-for i,risk in enumerate(risks_0[:,0]):
-    plt.text(x=risks_0[i,1]+1.3, y=risks_0[i,2]-0.05, s=risk, fontsize="large", zorder=6)
-
-# plt.scatter(risks_1[:,1], risks_1[:,2], marker="X", c = "k", zorder=6)
-# plt.title("Risk Map of Mitigated Risks", fontsize="x-large")
+# plt.scatter(risks_0[:,1], risks_0[:,2], marker="X", c = "k", zorder=6)
+# plt.title("Risk Map of Unmitigated Risks", fontsize="x-large")
 #
-# for i,risk in enumerate(risks_1[:,0]):
-#     plt.text(x=risks_1[i,1]+1.3, y=risks_1[i,2]-0.05, s=risk, fontsize="large", zorder=6)
+# for i,risk in enumerate(risks_0[:,0]):
+#     plt.text(x=risks_0[i,1]+1.3, y=risks_0[i,2]-0.05, s=risk, fontsize="large", zorder=6)
+#
+plt.scatter(risks_1[:,1], risks_1[:,2], marker="X", c = "k", zorder=6)
+plt.title("Risk Map of Mitigated Risks", fontsize="x-large")
+
+for i,risk in enumerate(risks_1[:,0]):
+     plt.text(x=risks_1[i,1]+1.3, y=risks_1[i,2]-0.05, s=risk, fontsize="large", zorder=6)
 
 plt.show()
