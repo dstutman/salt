@@ -140,8 +140,8 @@ plt.ylim(0,np.max(impacts))
 plt.xlim(0, np.max(probs))
 plt.plot(vgrid[0],vgrid[1], c = "k", ls = "-.", alpha = linestrength, zorder=4)
 plt.plot(hgrid[1], hgrid[0], c = "k", ls = "-.", alpha = linestrength, zorder=4)
-plt.ylabel("Measure of impact Scaled from 1 to 5", fontsize="x-large")
-plt.xlabel("Probability of Occurrence [%]", fontsize="x-large")
+plt.ylabel("Measure of impact Scaled from 1 to 5", fontsize="xx-large")
+plt.xlabel("Probability of Occurrence [%]", fontsize="xx-large")
 
 for j,tile in enumerate(vgrid[0][0:-1]):
     for i,x in enumerate(tile[0:-1]):
@@ -186,15 +186,16 @@ for impact in impacts:
 
 
 # plt.scatter(risks_0[:,1], risks_0[:,2], marker="X", c = "k", zorder=6)
-# plt.title("Risk Map of Unmitigated Risks", fontsize="x-large")
+# plt.title("Risk Map of Unmitigated Risks", fontsize="xx-large")
 #
 # for i,risk in enumerate(risks_0[:,0]):
-#     plt.text(x=risks_0[i,1]+1.3, y=risks_0[i,2]-0.05, s=risk, fontsize="large", zorder=6)
-#
+#     plt.text(x=risks_0[i,1]+1.3, y=risks_0[i,2]-0.05, s=risk, fontsize="x-large", zorder=6, c="white")
+
+
 plt.scatter(risks_1[:,1], risks_1[:,2], marker="X", c = "k", zorder=6)
-plt.title("Risk Map of Mitigated Risks", fontsize="x-large")
+plt.title("Risk Map of Mitigated Risks", fontsize="xx-large")
 
 for i,risk in enumerate(risks_1[:,0]):
-     plt.text(x=risks_1[i,1]+1.3, y=risks_1[i,2]-0.05, s=risk, fontsize="large", zorder=6)
+     plt.text(x=risks_1[i,1]+1.3, y=risks_1[i,2]-0.05, s=risk, fontsize="x-large", zorder=6, c="white")
 
 plt.show()
