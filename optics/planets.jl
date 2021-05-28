@@ -18,7 +18,7 @@ end
 # Configuration protection end
 
 # SNR relationships
-function null_depth(st_angular_dia, lambda=10E-6, baseline=1E3, phase_var=0, frac_intensity_var=0)
+function null_depth(st_angular_dia, lambda=10E-6, baseline=100, phase_var=0, frac_intensity_var=0)
     st_leakage = pi^2 / 4 * (st_angular_dia/(lambda/baseline))^2
     return phase_var^2 + st_leakage + frac_intensity_var^2
 end
@@ -99,7 +99,7 @@ plotly()
 
 
 # ICRS origin
-scatter([0], [0], [0], color=:orange, label="Solar Baricenter")
+scatter([0], [0], [0], color=:orange, label="Solar System Baricenter")
 
 # Earth North Pole (sanity check)
 scatter!([0], [0], [1], color=:yellow, label="Earth Celestial North")
