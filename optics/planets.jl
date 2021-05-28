@@ -34,9 +34,14 @@ R(α, δ) = Ry(-δ) * Rz(α)
 δ0 = deg2rad(66.5392)
 p_moon = -(inv(R(α0, δ0)) * [1; 0; 0])
 
-ds[:, :p_vect] = map((ra, dec) -> tuple((inv(R(ra, dec)) * [1; 0; 0])...), ds[:, :ra], ds[:, :dec])
+ds[:, :p_vect] = map((ra, dec) -> inv(R(ra, dec)) * [1; 0; 0], ds[:, :ra], ds[:, :dec])
 ds[:, :sep_angle] = map(v -> acos(dot(v, p_moon)), ds[:, :p_vect])
 
 using Plots
-xyz = reinterpret(reshape, Int, ds[ds[:, :sep_angle] .< 30, :p_vect])
-scatter(xyz...)
+plotly()
+
+xyz = hcat(ds[ds[:, :sep_angle] .< deg2rad(50), :p_vect]...)
+plt=scatter(xyz[1, :], xyz[2, :], xyz[3, :])
+scatter!([0], [0], [0], color=:orange)
+scatter!([0], [0], [1])
+scatter!([p_moon[1]], [p_moon[2]], [p_moon[3]], color=:red)
