@@ -50,6 +50,7 @@ end
     VISIBLE
     OUT_OF_VIEW
     OUT_OF_RANGE
+    SNR_TOO_LOW
 end
 ds[:, :visibility] .= VISIBLE
 
@@ -90,10 +91,12 @@ ds[:, :st_noise] .*= map((st_rad, sy_dist) -> null_depth(st_rad/sy_dist), ds[:, 
 ds[:, :pl_sig] = map(local_flux, ds[:, :pl_eqt], ds[:, :pl_rade], ds[:, :sy_dist])
 ds[:, :pl_sig] .*= 0.5 # Getting planet signal modulation costs 1/2 signal
 
-
+# SNR filtering
+ds[(ds[:, :visibility] .== VISIBLE) .& (ds[:, :pl_sig] ./ ds[:, :st_noise] .< 5), :visibility] .= SNR_TOO_LOW
 
 using Plots
 plotly()
+
 
 # ICRS origin
 scatter([0], [0], [0], color=:orange, label="Solar Baricenter")
@@ -107,6 +110,10 @@ scatter!([p_moon[1]], [p_moon[2]], [p_moon[3]], color=:red, label="Moon Celestia
 # Out of FOR objects
 oof = hcat(ds[ds[:, :visibility] .== OUT_OF_VIEW, :p_vect]...)
 scatter!(oof[1, :], oof[2, :], oof[3, :], color=:black, mopacity = 0.2, label="Out of FOR")
+
+# SNR too low objects
+stl = hcat(ds[ds[:, :visibility] .== SNR_TOO_LOW, :p_vect]...)
+scatter!(stl[1, :], stl[2, :], stl[3, :], color=:blue, mopacity = 0.2, label="SNR Too Low")
 
 # Out of range objects
 # oor = hcat(ds[ds[:, :visibility] .== OUT_OF_RANGE, :p_vect]...)
