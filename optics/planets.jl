@@ -7,8 +7,15 @@ using LinearAlgebra
 # Configuration start
 dataset = "PS_2021.05.20_08.13.20.csv"
 prelim_filter = false
-pt_auth = 30 # Pointing authority, degrees
+pt_auth = 90 # Pointing authority, degrees
 # Configuration end
+
+# Configuration protection
+if pt_auth > 90
+    println("Clamping pointing authority, was $pt_auth")
+    pt_auth = 90
+end
+# Configuration protection end
 
 # Start of program
 println("Starting in $(pwd())")
@@ -67,6 +74,6 @@ scatter!(oof[1, :], oof[2, :], oof[3, :], color=:black, mopacity = 0.1, label="O
 
 # Visible objects
 vis = hcat(ds[ds[:, :visibility] .== VISIBLE, :p_vect]...)
-scatter!(xyz[1, :], xyz[2, :], xyz[3, :], color=:blue, label="Visible")
+scatter!(vis[1, :], vis[2, :], vis[3, :], color=:blue, label="Visible")
 
 
