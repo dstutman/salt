@@ -5,7 +5,9 @@ using DataFrames
 using LinearAlgebra
 
 # Configuration start
-dataset = "PS_2021.05.20_03.16.32.csv"
+dataset = "PS_2021.05.20_08.13.20.csv"
+prelim_filter = false
+pt_auth = 30 # Pointing authority, degrees
 # Configuration end
 
 # Start of program
@@ -15,10 +17,19 @@ println("Starting in $(pwd())")
 println("Loading $dataset...")
 ds = DataFrame(CSV.File("Datasets/$dataset", comment="#", select=[:soltype, :pl_controv_flag, :pl_orbsmax, :pl_rade, :pl_masse, :st_rad, :st_mass, :st_lum, :ra, :dec, :sy_dist]))
 
-# Filter out planets missing necessary fields, or that are unconfirmed or controversial
-#dropmissing!(ds, disallowmissing=true)
-filter!(row -> row[:soltype] == "Published Confirmed", ds)
-filter!(row -> row[:pl_controv_flag] == 0, ds)
+if prelim_filter
+    # Filter out planets missing necessary fields, or that are unconfirmed or controversial
+    #dropmissing!(ds, disallowmissing=true)
+    filter!(row -> row[:soltype] == "Published Confirmed", ds)
+    filter!(row -> row[:pl_controv_flag] == 0, ds)
+end
+
+# Set the default visibility modifier
+@enum Visibility begin
+    VISIBLE
+    OUT_OF_VIEW
+end
+ds[:, :visibility] .= VISIBLE
 
 # Convert right ascention and declination to radians
 ds[:, :ra] = deg2rad.(ds[:, :ra])
@@ -36,12 +47,26 @@ p_moon = -(inv(R(α0, δ0)) * [1; 0; 0])
 
 ds[:, :p_vect] = map((ra, dec) -> inv(R(ra, dec)) * [1; 0; 0], ds[:, :ra], ds[:, :dec])
 ds[:, :sep_angle] = map(v -> acos(dot(v, p_moon)), ds[:, :p_vect])
+ds[ds[:, :sep_angle] .> deg2rad(pt_auth), :visibility] .= OUT_OF_VIEW
 
 using Plots
 plotly()
 
-xyz = hcat(ds[ds[:, :sep_angle] .< deg2rad(50), :p_vect]...)
-plt=scatter(xyz[1, :], xyz[2, :], xyz[3, :])
-scatter!([0], [0], [0], color=:orange)
-scatter!([0], [0], [1])
-scatter!([p_moon[1]], [p_moon[2]], [p_moon[3]], color=:red)
+# ICRS origin
+scatter([0], [0], [0], color=:orange, label="Solar Baricenter")
+
+# Earth North Pole (sanity check)
+scatter!([0], [0], [1], color=:yellow, label="Earth Celestial North")
+
+# Moon south pole
+scatter!([p_moon[1]], [p_moon[2]], [p_moon[3]], color=:red, label="Moon Celestial South")
+
+# Out of FOR objects
+oof = hcat(ds[ds[:, :visibility] .== OUT_OF_VIEW, :p_vect]...)
+scatter!(oof[1, :], oof[2, :], oof[3, :], color=:black, mopacity = 0.1, label="Out of FOR")
+
+# Visible objects
+vis = hcat(ds[ds[:, :visibility] .== VISIBLE, :p_vect]...)
+scatter!(xyz[1, :], xyz[2, :], xyz[3, :], color=:blue, label="Visible")
+
+
