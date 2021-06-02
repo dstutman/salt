@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import control as cm
 import math
-
+import scipy as sc
 
 # Wave function
 def wave(t):
@@ -18,19 +18,24 @@ def wave(t):
     baseFreq = 2 * baseFreq * math.pi  # radians/second
     maxAmplitude = 1/(a+b+c) * 0.02
 
-    wave = (a * np.sin(t*baseFreq) + b * np.sin(t*(baseFreq*0.23)) + c * np.sin(t*(baseFreq*2) + divc))
-    wave_dot = ((a*baseFreq) * np.cos(t*baseFreq) + (b*(baseFreq*0.23)) * np.cos(t*(baseFreq*0.23)) + (c*(baseFreq*2)) * np.cos(t*(baseFreq*2) + divc))
+    # wave = (a * np.sin(t*baseFreq) + b * np.sin(t*(baseFreq*0.23)) + c * np.sin(t*(baseFreq*2) + divc))
+    # wave_dot = ((a*baseFreq) * np.cos(t*baseFreq) + (b*(baseFreq*0.23)) * np.cos(t*(baseFreq*0.23)) + (c*(baseFreq*2)) * np.cos(t*(baseFreq*2) + divc))
+    # wave_dot = ((a*baseFreq) * np.cos(t*baseFreq) + (b*(baseFreq*0.23)) * np.cos(t*(baseFreq*0.23)) + (c*(baseFreq*2)) * np.cos(t*(baseFreq*2) + divc))
 
-    # wave =  np.sin(t*baseFreq*2)
-    # wave_dot = baseFreq * np.cos(t*baseFreq*2)
+    baseFreq=baseFreq*2
+    wave =  np.sin(t*baseFreq)
+    wave_dot = baseFreq * np.cos(t*baseFreq)
+    wave_dot_dot = baseFreq**2 * -np.sin(t*baseFreq)
     # wave[int(half)::] = 0
     # wave_dot[int(half)::] = 0
-    return np.array([wave*maxAmplitude, wave_dot*maxAmplitude])
+    return np.array([wave*maxAmplitude, wave_dot*maxAmplitude, wave_dot_dot*maxAmplitude])
 
 
+# def wave(t):
+#     return sc.signal.square(t)
 # Constant values
 m = 450/6
-ks = 1000
+ks = 0.1
 damp = 1
 Tmax = 2000
 # dc = damp/m
@@ -45,11 +50,11 @@ A = np.array([
               [-ks/m, -dc]])
 
 B = np.array([
-              [0, 0],
-              [ks/m, dc]])
+              [0, 0, 0],
+              [ks/m, dc, 1]])
 
-C = np.array([[1, 0], [0, 1]])
-D = np.array([[0, 0], [0, 0]])
+C = np.array([[1, 0,], [0, 1,]])
+D = np.array([[0, 0, 0], [0, 0, 0]])
 
 
 T = np.arange(0,Tmax,0.1)
@@ -59,7 +64,7 @@ U = wave(T)
 ss = cm.StateSpace(A, B, C, D)
 print(U.T[0])
 print(U.T[0].T)
-yout, xout = cm.forced_response(ss, T=T, X0=[0,0], U=U)
+yout, xout = cm.forced_response(ss, T=T, X0=[0,0], U = U)
 
 dis = list(xout[0])
 vel = list(xout[1])
