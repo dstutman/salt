@@ -34,27 +34,34 @@ class solar_cell():
 
         return self.absor*Js*Total_A* cos(i)
 
-P_req = 728 # W, check if this is updated power required
+P_req = 313.57 # W, check if this is updated power required
 i = radians(10)  #  incidence angle
-Js = 1367  # Solar incidence W/m^2
+Jsmin = 1321  # max solar incidence W/m^2
+Jsavg =  1367  # average solar incidence W/m^2
+Jsmax = 1412  # min solar incidence W/m^2
 
+Js = Jsmax
 cell = solar_cell()
 
-step_max = 1  # K
 Qdif = 10**6
 ## Min Q difference
 
-for s in range(5000):
-    T = 100 + s/10
-    Qab = cell.power_ab(P_req, T, Js, i)
-    rad = cell.rad_Q(T)
-    Qe = cell.rad_Q(T) +  P_req
 
-    if abs(Qab-Qe) < Qdif:
-        Qdif = abs(Qab-Qe)
-        Ncell = cell.num_cells(P_req, T)
-        Teq = T
+for Js in [Jsmin, Jsavg, Jsmax]:
+    Qdif = 10 ** 6
+    print("Solar incidence = ", Js)
+    for s in range(500000):
+        T = 100 + s/1000
+        Qab = cell.power_ab(P_req, T, Js, i)
+        rad = cell.rad_Q(T)
+        Qe = cell.rad_Q(T) +  P_req
 
-print(Qdif)
-print(Ncell)
-print(Teq)
+        if abs(Qab-Qe) < Qdif:
+            Qdif = abs(Qab-Qe)
+            Ncell = cell.num_cells(P_req, T)
+            Teq = T
+
+    print("Error heat = ",Qdif)
+    print("Number cells = ",Ncell)
+    print("Temperature equilibrium = ",Teq)
+    print()
