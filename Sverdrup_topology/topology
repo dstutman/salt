@@ -1,0 +1,19 @@
+import numpy as np
+import pandas as pd
+from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+R = 1737.1 # [km]
+
+csv = r"C:\Users\noutb\PycharmProjects\LR\bsc-y3-q4\DSE\data\LolaRDR_-89N-88N_188E226E\lolatopo_1500"
+
+df = pd.read_csv(csv)
+df.columns = np.char.strip(np.array(df.columns, dtype="<U7"))
+
+x = df["x"]
+y = df["y"]
+z = -1*df["z"] - R
+
+ax = Axes3D(plt.figure())
+ax.plot_trisurf(x, y, z, cmap="coolwarm")
+plt.show()
