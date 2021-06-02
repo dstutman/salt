@@ -32,8 +32,6 @@ Calculates the time average null depth.
     phs_var: Phase variance (rad**2)
     frac_inten_var: Fractional intensity variations (-)
 '''
-
-
 def null_depth(st_ang_dia, lam=10E-6, baseline=100, phs_var=0, frac_inten_var=0):
     st_leak = (pi**2)/4 * (baseline*st_ang_dia/lam) ** 2
     return phs_var + st_leak + frac_inten_var
@@ -43,8 +41,6 @@ def null_depth(st_ang_dia, lam=10E-6, baseline=100, phs_var=0, frac_inten_var=0)
 Calculates the black-body emissions in watts.
     bd_eq_temp: Body equilibrium temperature (K)
 '''
-
-
 def blackbody_flux(bd_eq_tem):
     return cns.sigma * bd_eq_tem**4
 
@@ -55,8 +51,6 @@ Calculates the shot noise in x/sqrt(s).
     st_flux: Stellar flux (x/s)
     bg_flux: Background flux (x/s)
 '''
-
-
 def shot_noise(pl_flux, st_flux, bg_flux=0):
     return np.sqrt(pl_flux + bg_flux + st_flux)
 
@@ -65,8 +59,6 @@ def shot_noise(pl_flux, st_flux, bg_flux=0):
 Calculates the photon energy in J/ph.
     lam: The wavelength (m)
 '''
-
-
 def photon_energy(lam):
     return cns.h * cns.c / lam
 
@@ -102,8 +94,6 @@ ds['visibility'] = Visibility.VISIBLE
 Defines the rotation from the ICRS frame
 to the target pointing frame
 '''
-
-
 def R(ra, dec):
     def Rz(theta):
         return np.array([[np.cos(theta), np.sin(theta), 0],
