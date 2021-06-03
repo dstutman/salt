@@ -8,7 +8,7 @@ import numpy as np
 import numpy.linalg as la
 
 # Configuration
-ds_path = Path("optics/Datasets/PS_2021.05.20_08.13.20.csv")
+ds_path = Path("Datasets/PS_2021.05.20_08.13.20.csv")
 prefilter = True
 pt_auth = 50  # Degrees
 show_figs = True
@@ -25,7 +25,8 @@ n_mirrors = 4
 
 # Configuration checks
 if pt_auth > 90:
-    print(f'Clamping pointing authority (was ${pt_auth}')
+    if __name__ == '__main__':
+        print(f'Clamping pointing authority (was ${pt_auth}')
     pt_auth = 90
 
 # Basic formulas
@@ -85,133 +86,134 @@ def rms_null_variation(phs_var, frac_inten_var=0):
     return np.sqrt((phs_var**2 + frac_inten_var**2)/8)
 
 
-# Load the dataset
-ds = pd.read_csv(ds_path, comment='#', usecols=[
-                 'soltype', 'pl_controv_flag', 'ra', 'dec', 'sy_dist',
-                 'pl_name', 'pl_rade', 'pl_eqt', 'st_teff', 'st_rad'])
-if prefilter:
-    ds = ds.dropna()
-    ds = ds[ds['soltype'] == 'Published Confirmed']
-    ds = ds[ds['pl_controv_flag'] == False]  # noqa: E712
+if __name__ == '__main__':
+    # Load the dataset
+    ds = pd.read_csv(ds_path, comment='#', usecols=[
+                     'soltype', 'pl_controv_flag', 'ra', 'dec', 'sy_dist',
+                     'pl_name', 'pl_rade', 'pl_eqt', 'st_teff', 'st_rad'])
+    if prefilter:
+        ds = ds.dropna()
+        ds = ds[ds['soltype'] == 'Published Confirmed']
+        ds = ds[ds['pl_controv_flag'] == False]  # noqa: E712
 
-# Convert dataset units
-ds[['ra', 'dec']] *= radians(1)
-ds['sy_dist'] *= cns.parsec
-ds['st_rad'] *= 696342E3  # Solar radii to m
-ds['pl_rade'] *= 6371E3  # Earth radii to m
+    # Convert dataset units
+    ds[['ra', 'dec']] *= radians(1)
+    ds['sy_dist'] *= cns.parsec
+    ds['st_rad'] *= 696342E3  # Solar radii to m
+    ds['pl_rade'] *= 6371E3  # Earth radii to m
 
-# Set up the visibility column
+    # Set up the visibility column
 
+    class Visibility(Enum):
+        """Defines the possible visibility modifiers."""
 
-class Visibility(Enum):
-    """Defines the possible visibility modifiers."""
+        VISIBLE = auto()
+        OUT_OF_FOR = auto()
+        OUT_OF_RANGE = auto()
+        SNR_TOO_LOW = auto()
+        INT_TOO_LONG = auto()
 
-    VISIBLE = auto()
-    OUT_OF_FOR = auto()
-    OUT_OF_RANGE = auto()
-    SNR_TOO_LOW = auto()
-    INT_TOO_LONG = auto()
+    ds['visibility'] = Visibility.VISIBLE
 
+    # Determine geometric planet visibility
 
-ds['visibility'] = Visibility.VISIBLE
+    def R(ra, dec):
+        """Create rotation matrix from ICRS frame to target pointing frame."""
+        def Rz(theta):
+            return np.array([[np.cos(theta), np.sin(theta), 0],
+                             [-np.sin(theta), np.cos(theta), 0],
+                             [0, 0, 1]])
 
-# Determine geometric planet visibility
+        def Ry(theta):
+            return np.array([[np.cos(theta), 0, -np.sin(theta)],
+                             [0, 1, 0],
+                             [np.sin(theta), 0, np.cos(theta)]])
 
+        return Ry(-dec) @ Rz(ra)
 
-def R(ra, dec):
-    """Create rotation matrix from ICRS frame to target pointing frame."""
-    def Rz(theta):
-        return np.array([[np.cos(theta), np.sin(theta), 0],
-                         [-np.sin(theta), np.cos(theta), 0],
-                         [0, 0, 1]])
+    ra0 = radians(269.9949)  # Moon celestial north right ascention
+    dec0 = radians(66.5392)  # Moon celestial north declination
+    mn_spole = -la.inv(R(ra0, dec0)) @ np.array([1, 0, 0]).T
 
-    def Ry(theta):
-        return np.array([[np.cos(theta), 0, -np.sin(theta)],
-                         [0, 1, 0],
-                         [np.sin(theta), 0, np.cos(theta)]])
+    ds['pt_vect'] = ds[['ra', 'dec']].apply(
+        lambda ra_dec: la.inv(R(*ra_dec)) @ np.array([1, 0, 0]).T, axis=1)
+    ds['sep_ang'] = ds['pt_vect'].apply(
+        lambda v: np.arccos(np.dot(v, mn_spole)))
+    ds.loc[ds['sep_ang'] > radians(
+        pt_auth), 'visibility'] = Visibility.OUT_OF_FOR
 
-    return Ry(-dec) @ Rz(ra)
+    # Fluxes at source
+    pl_sfca = 4*pi*ds['pl_rade']**2
+    ds['pl_watt_flux'] = blackbody_flux(ds['pl_eqt'])
+    ds['pl_watt'] = ds['pl_watt_flux']*pl_sfca
+    ds['pl_phps'] = ds['pl_watt']/photon_energy(wavelength)
 
+    st_sfca = 4*pi*ds['st_rad']**2
+    ds['st_watt_flux'] = blackbody_flux(ds['st_teff'])
+    ds['st_watt'] = ds['st_watt_flux']*st_sfca
+    ds['st_phps'] = ds['st_watt']/photon_energy(wavelength)
 
-ra0 = radians(269.9949)  # Moon celestial north right ascention
-dec0 = radians(66.5392)  # Moon celestial north declination
-mn_spole = -la.inv(R(ra0, dec0)) @ np.array([1, 0, 0]).T
+    # Measured fluxes
+    sy_spha = (4*pi*ds['sy_dist']**2)
+    ap_area = n_mirrors*pi*mirror_radius**2
+    ds['pl_meas_phps'] = ds['pl_phps'] * \
+        (1/2)*instrumental_throughput/sy_spha*ap_area
 
-ds['pt_vect'] = ds[['ra', 'dec']].apply(
-    lambda ra_dec: la.inv(R(*ra_dec)) @ np.array([1, 0, 0]).T, axis=1)
-ds['sep_ang'] = ds['pt_vect'].apply(lambda v: np.arccos(np.dot(v, mn_spole)))
-ds.loc[ds['sep_ang'] > radians(pt_auth), 'visibility'] = Visibility.OUT_OF_FOR
+    ds['st_angdia'] = 2*ds['st_rad']/ds['sy_dist']
+    ds['st_meas_phps'] = ds['st_phps'] * \
+        null_depth(ds['st_angdia'])/sy_spha*ap_area
 
-# Fluxes at source
-pl_sfca = 4*pi*ds['pl_rade']**2
-ds['pl_watt_flux'] = blackbody_flux(ds['pl_eqt'])
-ds['pl_watt'] = ds['pl_watt_flux']*pl_sfca
-ds['pl_phps'] = ds['pl_watt']/photon_energy(wavelength)
+    # SNR
+    ds['ins_noise'] = ds['st_meas_phps']*rms_null_variation(phase_variance)
+    ds['sh_noise'] = shot_noise(ds['pl_meas_phps'], ds['st_meas_phps'])
+    ds['t_int'] = (required_snr*np.sqrt(ds['sh_noise']**2 +
+                   ds['ins_noise']**2)/ds['pl_meas_phps']*resolution)**2
+    ds.loc[(ds['visibility'] == Visibility.VISIBLE) & (
+        ds['t_int'] > max_exposure), 'visibility'] = Visibility.INT_TOO_LONG
 
-st_sfca = 4*pi*ds['st_rad']**2
-ds['st_watt_flux'] = blackbody_flux(ds['st_teff'])
-ds['st_watt'] = ds['st_watt_flux']*st_sfca
-ds['st_phps'] = ds['st_watt']/photon_energy(wavelength)
+    # Plotting
+    fig = splt.make_subplots(rows=2, cols=2,
+                             specs=[[{'type': 'scene'}, {'type': 'xy'}],
+                                    [{'type': 'xy'}, {'type': 'xy'}]])
+    fig.update_layout(scene_aspectmode='data')
 
-# Measured fluxes
-sy_spha = (4*pi*ds['sy_dist']**2)
-ap_area = n_mirrors*pi*mirror_radius**2
-ds['pl_meas_phps'] = ds['pl_phps'] * \
-    (1/2)*instrumental_throughput/sy_spha*ap_area
+    # ICRS origin
+    fig.add_scatter3d(x=[0], y=[0], z=[0], name='ICRS Origin',
+                      mode='markers', row=1, col=1)
 
-ds['st_angdia'] = 2*ds['st_rad']/ds['sy_dist']
-ds['st_meas_phps'] = ds['st_phps']*null_depth(ds['st_angdia'])/sy_spha*ap_area
+    # Earth North Pole
+    fig.add_scatter3d(x=[0], y=[0], z=[1],
+                      name='Earth North Pole', mode='markers', row=1, col=1)
 
-# SNR
-ds['ins_noise'] = ds['st_meas_phps']*rms_null_variation(phase_variance)
-ds['sh_noise'] = shot_noise(ds['pl_meas_phps'], ds['st_meas_phps'])
-ds['t_int'] = (required_snr*np.sqrt(ds['sh_noise']**2 +
-               ds['ins_noise']**2)/ds['pl_meas_phps']*resolution)**2
-ds.loc[(ds['visibility'] == Visibility.VISIBLE) & (
-    ds['t_int'] > max_exposure), 'visibility'] = Visibility.INT_TOO_LONG
+    # Moon south pole
+    fig.add_scatter3d(x=[mn_spole[0]], y=[mn_spole[1]],
+                      z=[mn_spole[2]], name='Moon South Pole',
+                      mode='markers', row=1, col=1)
 
-# Plotting
-fig = splt.make_subplots(rows=2, cols=2,
-                         specs=[[{'type': 'scene'}, {'type': 'xy'}],
-                                [{'type': 'xy'}, {'type': 'xy'}]])
-fig.update_layout(scene_aspectmode='data')
+    # Objects out of Field of Regard
+    xyz_oof = np.stack(
+        ds.loc[ds['visibility'] == Visibility.OUT_OF_FOR, 'pt_vect']).T
+    fig.add_scatter3d(x=xyz_oof[0], y=xyz_oof[1], z=xyz_oof[2],
+                      name='Out of FOR', mode='markers', opacity=0.1, row=1, col=1)
 
-# ICRS origin
-fig.add_scatter3d(x=[0], y=[0], z=[0], name='ICRS Origin',
-                  mode='markers', row=1, col=1)
+    # Objects with excessive integration times
+    xyz_int = np.stack(
+        ds.loc[ds['visibility'] == Visibility.INT_TOO_LONG, 'pt_vect']).T
+    fig.add_scatter3d(x=xyz_int[0], y=xyz_int[1], z=xyz_int[2],
+                      name='Integration Too Long', mode='markers', row=1, col=1)
 
-# Earth North Pole
-fig.add_scatter3d(x=[0], y=[0], z=[1],
-                  name='Earth North Pole', mode='markers', row=1, col=1)
+    # Visible objects
+    xyz_vis = np.stack(
+        ds.loc[ds['visibility'] == Visibility.VISIBLE, 'pt_vect']).T
+    fig.add_scatter3d(x=xyz_vis[0], y=xyz_vis[1], z=xyz_vis[2],
+                      name='Visible', mode='markers', row=1, col=1)
 
-# Moon south pole
-fig.add_scatter3d(x=[mn_spole[0]], y=[mn_spole[1]],
-                  z=[mn_spole[2]], name='Moon South Pole',
-                  mode='markers', row=1, col=1)
+    # Integration times vs distance
+    fig.update_yaxes(type='log', row=1, col=2)
+    dist_int = ds.loc[(ds['visibility'] == Visibility.VISIBLE) | (
+        ds['visibility'] == Visibility.INT_TOO_LONG), ['sy_dist', 't_int']]
+    fig.add_scatter(x=dist_int['sy_dist'],
+                    y=dist_int['t_int'], mode='markers', row=1, col=2)
 
-# Objects out of Field of Regard
-xyz_oof = np.stack(
-    ds.loc[ds['visibility'] == Visibility.OUT_OF_FOR, 'pt_vect']).T
-fig.add_scatter3d(x=xyz_oof[0], y=xyz_oof[1], z=xyz_oof[2],
-                  name='Out of FOR', mode='markers', opacity=0.1, row=1, col=1)
-
-# Objects with excessive integration times
-xyz_int = np.stack(
-    ds.loc[ds['visibility'] == Visibility.INT_TOO_LONG, 'pt_vect']).T
-fig.add_scatter3d(x=xyz_int[0], y=xyz_int[1], z=xyz_int[2],
-                  name='Integration Too Long', mode='markers', row=1, col=1)
-
-# Visible objects
-xyz_vis = np.stack(ds.loc[ds['visibility'] == Visibility.VISIBLE, 'pt_vect']).T
-fig.add_scatter3d(x=xyz_vis[0], y=xyz_vis[1], z=xyz_vis[2],
-                  name='Visible', mode='markers', row=1, col=1)
-
-# Integration times vs distance
-fig.update_yaxes(type='log', row=1, col=2)
-dist_int = ds.loc[(ds['visibility'] == Visibility.VISIBLE) | (
-    ds['visibility'] == Visibility.INT_TOO_LONG), ['sy_dist', 't_int']]
-fig.add_scatter(x=dist_int['sy_dist'],
-                y=dist_int['t_int'], mode='markers', row=1, col=2)
-
-if show_figs:
-    fig.show()
+    if show_figs:
+        fig.show()
