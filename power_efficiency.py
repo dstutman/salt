@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
 import numpy as np
 from math import radians,cos
+import scipy as sp
 
 class solar_cell():
     def __init__(self):
@@ -13,9 +14,9 @@ class solar_cell():
         self.DImpdt = 0.00007  # A/K
         self.area = 30.18*10**-4  # m**2
 
-    def num_cells(self, Req_power, T):
+    def num_cells(self, T):
 
-        return Req_power/self.cell_power(T)
+        return self.P_req/self.cell_power(T)
 
     def cell_power(self, T): #temp in kelvin
         Vmp_new = self.Vmp + (self.DVmpdt*(T-(273.15+25)))
@@ -25,16 +26,29 @@ class solar_cell():
 
     def rad_Q(self, T):
         stef_boltz = 5.67*10**(-8)
-        Total_A = self.num_cells(P_req, T) * self.area
+        Total_A = self.num_cells(T) * self.area
 
         return self.emiss*stef_boltz*T**4*Total_A*2
 
-    def power_ab(self,P_req,T, Js, i):
-        Total_A = self.num_cells(P_req, T)*self.area
+    def power_ab(self,T, i):
+        Total_A = self.num_cells(T)*self.area
 
-        return self.absor*Js*Total_A* cos(i)
+        return self.absor*self.solar*Total_A* cos(i)
+    
+    def solar_incidence(self,Js):
+        self.solar = Js
 
-P_req = 313.57 # W, check if this is updated power required
+    def power_req(self,P_req):
+        self.P_req = P_req
+
+    def Q_dif(self,T):
+        Qab = self.power_ab(T, i)
+        Qe = cell.rad_Q(T) +  self.P_req
+
+        return abs(Qab-Qe)
+        
+        
+P_req = 4045.26 # W, check if this is updated power required
 i = radians(10)  #  incidence angle
 Jsmin = 1321  # max solar incidence W/m^2
 Jsavg =  1367  # average solar incidence W/m^2
@@ -50,15 +64,17 @@ Qdif = 10**6
 for Js in [Jsmin, Jsavg, Jsmax]:
     Qdif = 10 ** 6
     print("Solar incidence = ", Js)
+    cell.solar_incidence(Js)
+    cell.power_req(P_req)
+
     for s in range(500000):
         T = 100 + s/1000
-        Qab = cell.power_ab(P_req, T, Js, i)
-        rad = cell.rad_Q(T)
+        Qab = cell.power_ab(T, i)
         Qe = cell.rad_Q(T) +  P_req
 
         if abs(Qab-Qe) < Qdif:
             Qdif = abs(Qab-Qe)
-            Ncell = cell.num_cells(P_req, T)
+            Ncell = cell.num_cells(T)
             Teq = T
 
     print("Error heat = ",Qdif)
