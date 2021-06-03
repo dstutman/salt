@@ -29,6 +29,14 @@ function local_flux(bd_teq, bd_rad, sy_dist)
     local_flux = surface_flux * bd_rad^2 / sy_dist^2
     return local_flux
 end
+
+function shot_noise(opf, osf, obf=0)
+    return sqrt(opf + osf + obf)
+end
+
+function photon_energy(lambda=10E-6)
+    return 6.626E-34 * 3E8 / lambda
+end
 # SNR relationships end
 
 # Start of program
@@ -36,7 +44,7 @@ println("Starting in $(pwd())")
 
 # Load the dataset
 println("Loading $dataset...")
-ds = DataFrame(CSV.File("Datasets/$dataset", comment="#", select=[:soltype, :pl_controv_flag, :ra, :dec, :sy_dist, :pl_name, :pl_rade, :pl_eqt, :st_teff, :st_rad]))
+ds = DataFrame(CSV.File("Datasets/$dataset", comment="#", select=[:soltype, :pl_controv_flag, :ra, :dec, :sy_dist, :pl_name, :pl_rade, :pl_eqt, :st_rad, :st_teff]))
 
 if prelim_filter
     # Filter out planets missing necessary fields, or that are unconfirmed or controversial
@@ -51,6 +59,7 @@ end
     OUT_OF_VIEW
     OUT_OF_RANGE
     SNR_TOO_LOW
+    EXP_TOO_LONG
 end
 ds[:, :visibility] .= VISIBLE
 
@@ -68,7 +77,7 @@ ds[:, :pl_rade] .*= 6371E3
 Rz(a) = [cos(a) sin(a) 0; -sin(a) cos(a) 0; 0 0 1]
 Ry(d) = [cos(d) 0 -sin(d); 0 1 0; sin(d) 0 cos(d)]
 
-R(α, δ) = Ry(-δ) * Rz(α)
+R(a, d) = Ry(-d) * Rz(a)
 
 # Calculate the moon pointing vector
 a0 = deg2rad(269.9949)
@@ -90,13 +99,24 @@ ds[:, :st_noise] .*= map((st_rad, sy_dist) -> null_depth(st_rad/sy_dist), ds[:, 
 # Planetary signal
 ds[:, :pl_sig] = map(local_flux, ds[:, :pl_eqt], ds[:, :pl_rade], ds[:, :sy_dist])
 ds[:, :pl_sig] .*= 0.5 # Getting planet signal modulation costs 1/2 signal
+# Shot noise (Ph/s/m_r)
+ds[:, :sh_noise] = map(shot_noise, ds[:, :pl_sig], ds[:, :st_noise])
+ds[:, :sh_noise] .*= sqrt(pi)
+ds[:, :sh_noise] .*= 2 # 2m Mirror
+
+# Exposure time calculation
+ds[:, :t_exp] = (5 * ds[:, :sh_noise] ./ ds[:, :pl_sig]) .^ 2
+#ds[:, :t_exp] .*= sqrt(photon_energy())
 
 # SNR filtering
 ds[(ds[:, :visibility] .== VISIBLE) .& (ds[:, :pl_sig] ./ ds[:, :st_noise] .< 5), :visibility] .= SNR_TOO_LOW
 
+# Calculate required exposure time
+
+ds[(ds[:, :visibility] .== VISIBLE) .& (ds[:, :t_exp] .> 30*60*60), :visibility] .= EXP_TOO_LONG
+
 using Plots
 plotly()
-
 
 # ICRS origin
 scatter([0], [0], [0], color=:orange, label="Solar System Baricenter")
