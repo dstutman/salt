@@ -18,12 +18,13 @@ required_snr = 10
 resolution = 25
 instrumental_throughput = 0.10
 max_exposure = 60*60*30
-phase_variance = (2*pi * 1.5E-9/10E-6)**2  # TODO: This is path length error maximum, set to 3sigma for variance
+# TODO: This is path length error maximum, set to 3sigma for variance
+phase_variance = (2*pi * 1.5E-9/10E-6)**2
 mirror_radius = 2
 n_mirrors = 4
 
 # Configuration checks
-if pt_auth > 90: # pragma: no cover
+if pt_auth > 90:  # pragma: no cover
     if __name__ == '__main__':
         print(f'Clamping pointing authority (was ${pt_auth}')
     pt_auth = 90
