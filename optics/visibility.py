@@ -18,13 +18,12 @@ required_snr = 10
 resolution = 25
 instrumental_throughput = 0.10
 max_exposure = 60*60*30
-# TODO: This is path length error maximum, set to 3sigma for variance
-phase_variance = 2*pi * 1.5E-9/10E-6
+phase_variance = (2*pi * 1.5E-9/10E-6)**2  # TODO: This is path length error maximum, set to 3sigma for variance
 mirror_radius = 2
 n_mirrors = 4
 
 # Configuration checks
-if pt_auth > 90:
+if pt_auth > 90: # pragma: no cover
     if __name__ == '__main__':
         print(f'Clamping pointing authority (was ${pt_auth}')
     pt_auth = 90
@@ -86,7 +85,7 @@ def rms_null_variation(phs_var, frac_inten_var=0):
     return np.sqrt((phs_var**2 + frac_inten_var**2)/8)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     # Load the dataset
     ds = pd.read_csv(ds_path, comment='#', usecols=[
                      'soltype', 'pl_controv_flag', 'ra', 'dec', 'sy_dist',

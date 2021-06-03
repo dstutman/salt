@@ -11,9 +11,8 @@ import visibility
 
 def test_null_depth():
     from scipy.constants import arcsec
-    assert visibility.null_depth(0.0000127378756436371000000000*arcsec, 
-                                 lam=10E-6, baseline=100, phs_var=0, 
-                                 frac_inten_var=0) == approx(2.3524E-07, 1E-3)
+    assert visibility.null_depth(0.0000127378756436371000000000*arcsec,
+                                 10E-6, 100, 0, 0) == approx(2.3524E-07, 1E-3)
 
 
 def test_blackbody_flux():
@@ -34,3 +33,7 @@ def test_shot_noise():
 def test_photon_energy():
     # Verified with https://www.sensorsone.com
     assert visibility.photon_energy(10E-6) == approx(1.98644586e-20, 1E-3)
+
+def test_rms_null_variation():
+    # Verified by hand
+    assert visibility.rms_null_variation(0.000942, 0.01) == approx(0.00355, 1E-3)
