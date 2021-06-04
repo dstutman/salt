@@ -16,11 +16,12 @@ wavelength = 8E-6
 baseline = 100
 required_snr = 10
 resolution = 25
+force_null = True
 instrumental_throughput = 0.10
 max_exposure = 60*60*30
 # TODO: This is path length error maximum, set to 3sigma for variance
 phase_variance = (2*pi * 1.5E-9/10E-6)**2
-mirror_radius = 2
+mirror_radius = .5
 n_mirrors = 4
 
 # Configuration checks
@@ -160,10 +161,16 @@ if __name__ == '__main__':  # pragma: no cover
         (1/2)*instrumental_throughput/sy_spha*ap_area
 
     ds['st_angdia'] = 2*ds['st_rad']/ds['sy_dist']
-    ds['st_meas_phps'] = ds['st_phps'] * \
-        null_depth(ds['st_angdia'])/sy_spha*ap_area
+    ds['st_meas_phps'] = ds['st_phps']/sy_spha*ap_area
+    if force_null:
+       ds['st_meas_phps'] *= 5E-7
+       print("forced")
+    else:
+       ds['st_meas_phps'] *= null_depth(ds['st_angdia'])
 
     # SNR
+    ds[ds['pl_meas_phps'] > ds['st_meas_phps']]
+
     ds['ins_noise'] = ds['st_meas_phps']*rms_null_variation(phase_variance)
     ds['sh_noise'] = shot_noise(ds['pl_meas_phps'], ds['st_meas_phps'])
     ds['t_int'] = (required_snr*np.sqrt(ds['sh_noise']**2 +
