@@ -8,7 +8,7 @@ from matplotlib.animation import FuncAnimation
 
 s = np.sign
 
-Tmax = 6
+Tmax = 100
 stopLinear = Tmax
 stopToZero = Tmax
 randomFreq=0
@@ -29,20 +29,20 @@ l1 = 1.2
 l2 = 0.2
 l3 = -1.2
 
-kRover = 1000000000
+kRover = 100e6
 
 # k2 must be less than 40*k1 or 40*k2 
-k1 = 200
-k2 = k1
-k3 = k1
+k1 = 0
+k2 = 0
+k3 = 20000
 
-c1 = 0.9*m
-c2 = 0.9*m
-c3 = 0.9*m
+c1 = 0.95*m
+c2 = 0.95*m
+c3 = 0.95*m
 
 s1 = s(l1)
 s2 = s(l2)
-s3 = 1
+s3 = s(l3)
 
 maxBaseFreqHz = 21
 
@@ -56,12 +56,12 @@ print(f"Spring natural freq = {np.sqrt(k1/m)}")
 A = np.array([[0, 1, 0, 0],
               [-(k1+k2+k3)/m, -(c1+c2+c3)/m, (k1*l1 + k2*l2 + k3*l3)/m, (c1*l1 + c2*l2 + c3*l3)/m],
               [0, 0, 0, 1],
-              [(s1*k1*l1 + s2*k2*l2 + s3*k3*l3)/J, (s1*c1*l1 + s2*c2*l2 + s3*c3*l3)/J, -(s1*k1*l1*l1 + s2*k2*l2*l2 + s3*k3*l3*l3)/J, -(s1*c1*l1*l1 + s2*c2*l2*l2 + s3*c3*l3*l3)/J]])
+              [(k1*l1 + k2*l2 + k3*l3)/J, (c1*l1 + c2*l2 + c3*l3)/J, -(s1*k1*l1*l1 + s2*k2*l2*l2 + s3*k3*l3*l3)/J, -(s1*c1*l1*l1 + s2*c2*l2*l2 + s3*c3*l3*l3)/J]])
 
 B = np.array([[0,0,0,0,0,0],
               [c1/m, c2/m, c3/m, k1/m, k2/m, k3/m],
               [0,0,0,0,0,0],
-              [-(s1*c1*l1)/J, -(s2*c2*l2)/J, -(s3*c3*l3)/J, -(s1*k1*l1)/J, -(s2*k2*l2)/J, -(s3*k3*l3)/J]])
+              [(c1*l1)/J, (c2*l2)/J, (c3*l3)/J, (k1*l1)/J, (k2*l2)/J, (k3*l3)/J]])
 
 # u = [z1dot, z2dot, z3dot, z1, z2, z3]
 
@@ -120,7 +120,7 @@ U = np.concatenate((waveW1, waveW2, waveW3), axis=0)
 ss = cm.StateSpace(A, B, C, D)
 cm.damp(ss)
 
-TT, yout, xout = cm.forced_response(ss, T=T, X0=[0, 0, initialRotation, 0], U=U, return_x=True)
+TT, yout, xout = cm.forced_response(ss, T=T, X0=[0, 0, math.radians(10), 0], return_x=True)
 
 dis = list(yout[0])
 vel = list(yout[1])
