@@ -1,226 +1,378 @@
-import plotly.subplots as splt
+from re import L
+import plotly.subplots as sbplt
+import plotly.graph_objects as gpho
 from pathlib import Path
 from math import pi, radians
 from enum import Enum, auto
-import scipy.constants as cns
+import scipy.constants as sconst
 import pandas as pd
 import numpy as np
 import numpy.linalg as la
 
 # Configuration
-ds_path = Path("Datasets/PS_2021.05.20_08.13.20.csv")
-prefilter = True
-pt_auth = 50  # Degrees
-show_figs = True
-wavelength = 8E-6
-baseline = 100
-required_snr = 10
-resolution = 25
-force_null = True
-instrumental_throughput = 0.10
-max_exposure = 60*60*30
-# TODO: This is path length error maximum, set to 3sigma for variance
-phase_variance = (2*pi * 1.5E-9/10E-6)**2
-mirror_radius = .5
-n_mirrors = 4
+data_path = Path('Datasets/PS_2021.05.20_08.13.20.csv')
 
-# Configuration checks
-if pt_auth > 90:  # pragma: no cover
-    if __name__ == '__main__':
-        print(f'Clamping pointing authority (was ${pt_auth}')
-    pt_auth = 90
+# Constants
+sun_radius = 695508E3  # https://solarsystem.nasa.gov/solar-system/sun/by-the-numbers/
+earth_radius = 6371E3  # https://solarsystem.nasa.gov/solar-system/sun/by-the-numbers/
+lun_north_ra = radians(269.9949)  # Lunar celestial north right-ascention
+lun_north_dec = radians(66.5392)  # Lunar celestial north declination
+
+# Types
+
+
+class Visibility(Enum):
+    '''Defines the possible visibility modifiers.'''
+
+    VISIBLE = auto()
+    OUT_OF_FOR = auto()
+    OUT_OF_RANGE = auto()
+    SNR_TOO_LOW = auto()
+    INT_TOO_LONG = auto()
+
 
 # Basic formulas
+def circle_area(r):
+    return pi * r**2
 
 
-def null_depth(st_ang_dia, lam=wavelength, baseline=baseline,
-               phs_var=phase_variance, frac_inten_var=0):
-    """
-    Calculate the time average null depth.
+def sphere_area(r):
+    return 4 * pi * r**2
 
-    st_ang_dia: The apparent angular diameter of the star (rad)
-    lam: Wavelength (m)
-    baseline: Baseline length (m)
-    phs_var: Phase variance (rad**2)
-    frac_inten_var: Fractional intensity variations (-)
-    """
-    st_leak = (pi**2)/4*(baseline*st_ang_dia/lam)**2
-    return 1/4*(phs_var + st_leak + frac_inten_var)
+
+def R(ra, dec):
+    '''Create rotation matrix from ICRS frame to target pointing frame.'''
+    def Rz(theta):
+        return np.array([[np.cos(theta), np.sin(theta), 0],
+                         [-np.sin(theta), np.cos(theta), 0],
+                         [0, 0, 1]])
+
+    def Ry(theta):
+        return np.array([[np.cos(theta), 0, -np.sin(theta)],
+                         [0, 1, 0],
+                         [np.sin(theta), 0, np.cos(theta)]])
+    return Ry(-dec) @ Rz(ra)
+
+
+def south_pole():
+    '''
+    Calculate the lunar celestial south pole.
+    '''
+    return -1 * la.inv(R(lun_north_ra, lun_north_dec)
+                       ) @ np.array([1, 0, 0]).T
 
 
 def blackbody_flux(bd_eq_tem):
-    """
+    '''
     Calculate the black-body emissions in watts.
 
     bd_eq_temp: Body equilibrium temperature (K)
-    """
-    return cns.sigma*bd_eq_tem**4
-
-
-def shot_noise(pl_flux, st_flux, bg_flux=0):
-    """
-    Calculate the shot noise in x/sqrt(s).
-
-    pl_flux: Planetary flux (x/s)
-    st_flux: Stellar flux (x/s)
-    bg_flux: Background flux (x/s)
-    """
-    return np.sqrt(pl_flux + bg_flux + st_flux)
+    '''
+    return sconst.sigma*bd_eq_tem**4
 
 
 def photon_energy(lam):
-    """
+    '''
     Calculate the photon energy in J/ph.
 
     lam: The wavelength (m)
-    """
-    return cns.h*cns.c/lam
+    '''
+    return sconst.h*sconst.c/lam
 
 
 def rms_null_variation(phs_var, frac_inten_var=0):
-    """
+    '''
     Calculate the RMS variation of the null depth (-).
 
     phs_var: Phase variance (rad**2)
     frac_inten_var: Fractional intensity variations (-)
-    """
+    '''
     return np.sqrt((phs_var**2 + frac_inten_var**2)/8)
 
+# Main functionality
 
-if __name__ == '__main__':  # pragma: no cover
-    # Load the dataset
-    ds = pd.read_csv(ds_path, comment='#', usecols=[
+
+def load_dataset(path, only_uncontroversial=True, only_confirmed=True):
+    '''
+    Load a NASA Exoplanet Database dataset and performs basic filtering.
+
+    path: Path to dataset
+    only_uncontroversial: Filter out controversial planets
+    only_confirmed: Filter out unconfirmed planets
+    '''
+    df = pd.read_csv(path, comment='#', usecols=[
                      'soltype', 'pl_controv_flag', 'ra', 'dec', 'sy_dist',
                      'pl_name', 'pl_rade', 'pl_eqt', 'st_teff', 'st_rad'])
-    if prefilter:
-        ds = ds.dropna()
-        ds = ds[ds['soltype'] == 'Published Confirmed']
-        ds = ds[ds['pl_controv_flag'] == False]  # noqa: E712
 
-    # Convert dataset units
-    ds[['ra', 'dec']] *= radians(1)
-    ds['sy_dist'] *= cns.parsec
-    ds['st_rad'] *= 696342E3  # Solar radii to m
-    ds['pl_rade'] *= 6371E3  # Earth radii to m
+    df['pl_controv_flag'] = df['pl_controv_flag'] == 1.0
+    if only_uncontroversial:
+        df = df[~df['pl_controv_flag']]
 
-    # Set up the visibility column
+    if only_confirmed:
+        df = df[df['soltype'] == 'Published Confirmed']
 
-    class Visibility(Enum):
-        """Defines the possible visibility modifiers."""
+    df = df.dropna()
 
-        VISIBLE = auto()
-        OUT_OF_FOR = auto()
-        OUT_OF_RANGE = auto()
-        SNR_TOO_LOW = auto()
-        INT_TOO_LONG = auto()
+    df[['ra', 'dec']] *= sconst.degree
+    df['sy_dist'] *= sconst.parsec
+    df['st_rad'] *= sun_radius
+    df['pl_rade'] *= earth_radius
 
-    ds['visibility'] = Visibility.VISIBLE
+    df = df.rename(columns={'pl_rade': 'pl_rad', 'ra': 'sy_ra',
+                   'dec': 'sy_dec', 'pl_eqt': 'pl_temp', 'st_teff': 'st_temp'})
 
-    # Determine geometric planet visibility
+    return df
 
-    def R(ra, dec):
-        """Create rotation matrix from ICRS frame to target pointing frame."""
-        def Rz(theta):
-            return np.array([[np.cos(theta), np.sin(theta), 0],
-                             [-np.sin(theta), np.cos(theta), 0],
-                             [0, 0, 1]])
 
-        def Ry(theta):
-            return np.array([[np.cos(theta), 0, -np.sin(theta)],
-                             [0, 1, 0],
-                             [np.sin(theta), 0, np.cos(theta)]])
+def calculate_southern_zenith_angle(df):
+    '''
+    Calculate the zenith angle between the lunar south pole and all planets in radians.
+    This adds a 'zenith_angle' column to df.
 
-        return Ry(-dec) @ Rz(ra)
 
-    ra0 = radians(269.9949)  # Moon celestial north right ascention
-    dec0 = radians(66.5392)  # Moon celestial north declination
-    mn_spole = -la.inv(R(ra0, dec0)) @ np.array([1, 0, 0]).T
+    df: The planet dataset
+    '''
 
-    ds['pt_vect'] = ds[['ra', 'dec']].apply(
+    df = df.copy()
+
+    lun_south = south_pole()
+
+    df['sy_ptvect'] = df[['sy_ra', 'sy_dec']].apply(
         lambda ra_dec: la.inv(R(*ra_dec)) @ np.array([1, 0, 0]).T, axis=1)
-    ds['sep_ang'] = ds['pt_vect'].apply(
-        lambda v: np.arccos(np.dot(v, mn_spole)))
-    ds.loc[ds['sep_ang'] > radians(
-        pt_auth), 'visibility'] = Visibility.OUT_OF_FOR
+    df['sy_sepang'] = df['sy_ptvect'].apply(
+        lambda v: np.arccos(np.dot(v, lun_south)))
 
-    # Fluxes at source
-    pl_sfca = 4*pi*ds['pl_rade']**2
-    ds['pl_watt_flux'] = blackbody_flux(ds['pl_eqt'])
-    ds['pl_watt'] = ds['pl_watt_flux']*pl_sfca
-    ds['pl_phps'] = ds['pl_watt']/photon_energy(wavelength)
+    return df
 
-    st_sfca = 4*pi*ds['st_rad']**2
-    ds['st_watt_flux'] = blackbody_flux(ds['st_teff'])
-    ds['st_watt'] = ds['st_watt_flux']*st_sfca
-    ds['st_phps'] = ds['st_watt']/photon_energy(wavelength)
 
-    # Measured fluxes
-    sy_spha = (4*pi*ds['sy_dist']**2)
-    ap_area = n_mirrors*pi*mirror_radius**2
-    ds['pl_meas_phps'] = ds['pl_phps'] * \
-        (1/2)*instrumental_throughput/sy_spha*ap_area
+def calculate_emissions(df, wavelength=10E-6):
+    '''
+    Calculate the emission powers of stars and planets in photons per second.
 
-    ds['st_angdia'] = 2*ds['st_rad']/ds['sy_dist']
-    ds['st_meas_phps'] = ds['st_phps']/sy_spha*ap_area
-    if force_null:
-       ds['st_meas_phps'] *= 5E-7
-       print("forced")
-    else:
-       ds['st_meas_phps'] *= null_depth(ds['st_angdia'])
+    df: The planet dataset
+    '''
 
-    # SNR
-    ds[ds['pl_meas_phps'] > ds['st_meas_phps']]
+    df = df.copy()
 
-    ds['ins_noise'] = ds['st_meas_phps']*rms_null_variation(phase_variance)
-    ds['sh_noise'] = shot_noise(ds['pl_meas_phps'], ds['st_meas_phps'])
-    ds['t_int'] = (required_snr*np.sqrt(ds['sh_noise']**2 +
-                   ds['ins_noise']**2)/ds['pl_meas_phps']*resolution)**2
-    ds.loc[(ds['visibility'] == Visibility.VISIBLE) & (
-        ds['t_int'] > max_exposure), 'visibility'] = Visibility.INT_TOO_LONG
+    pl_wattage = blackbody_flux(df['pl_temp']) * sphere_area(df['pl_rad'])
+    st_wattage = blackbody_flux(df['st_temp']) * sphere_area(df['st_rad'])
+    df['pl_phps'] = pl_wattage / photon_energy(wavelength)
+    df['st_phps'] = st_wattage / photon_energy(wavelength)
 
-    # Plotting
-    fig = splt.make_subplots(rows=2, cols=2,
-                             specs=[[{'type': 'scene'}, {'type': 'xy'}],
-                                    [{'type': 'xy'}, {'type': 'xy'}]])
+    return df
+
+
+def calculate_local_fluxes(df):
+    '''
+    Calculate the local fluxes of stars and planets in photons per second per square meter.
+
+    df: The planet dataset
+    '''
+
+    df = df.copy()
+
+    df['pl_phpspm2_loc'] = df['pl_phps'] / sphere_area(df['sy_dist'])
+    df['st_phpspm2_loc'] = df['st_phps'] / sphere_area(df['sy_dist'])
+
+    return df
+
+
+def calculate_nulling(df, wavelength, baseline, phase_variance,
+                      fractional_intensity_variance):
+    '''
+    Calculate the time average null depth for each system.
+
+    df: The planet dataset
+    wavelength: Wavelength (m)
+    baseline: Nulling baseline (m)
+    phase_variance: Phase variance due to OPD (rad**2)
+    fractional_intensity_variance: Fractional intensity variance due to OPA (-)
+    '''
+
+    df = df.copy()
+
+    st_angular_diameter = 2 * df['st_rad'] / df['sy_dist']
+    st_leakage = pi**2 / 4 * (baseline * st_angular_diameter / wavelength)**2
+    df['st_nulldepth'] = 1 / 4 * \
+        (phase_variance + st_leakage + fractional_intensity_variance)
+
+    return df
+
+
+def calculate_detections(df, mirror_radius, instrument_throughput,
+                         quantum_efficiency, rotationally_modulated=True):
+    '''
+    Calculate the detections of the optical subsystem in electrons per second.
+
+    df: The planet dataset
+    mirror_radius: The mirror radius (m)
+    instrument_throughput: The instrument throughput from aperture to detector (-)
+    quantum_efficiency: The detector quantum efficiency (e/ph)
+    rotationally_modulated: Is the planet signal rotationally modulated for de-correlation?
+    '''
+
+    df = df.copy()
+
+    # Calculate incident photons per second on detector
+    pl_phps_incident = df['pl_phpspm2_loc'] * \
+        circle_area(mirror_radius) * instrument_throughput
+    st_phps_incident = df['st_phpspm2_loc'] * \
+        circle_area(mirror_radius) * df['st_nulldepth'] * instrument_throughput
+
+    if rotationally_modulated:
+        pl_phps_incident *= 0.5
+
+    df['pl_eps'] = pl_phps_incident * quantum_efficiency
+    df['st_eps'] = st_phps_incident * quantum_efficiency
+
+    return df
+
+
+def calculate_shot_noise_snr(df, integration_time, resolution, phase_variance):
+    '''
+    Calculate the shot noise after a given integration time.
+    TODO: Does not account for thermal background.
+
+    df: The planet dataset
+    integration_time: The allowable integration time (s)
+    resolution: The spectral resolution (-)
+    phase_variance: Phase variance due to OPD (rad**2)
+    '''
+
+    df = df.copy()
+
+    instrumental_noise = df['st_eps'] * rms_null_variation(phase_variance)
+    shot_noise = np.sqrt(resolution * (df['pl_eps'] + df['st_eps']))
+    df['shot_snr_for_time'] = np.sqrt(
+        integration_time) * df['pl_eps'] / np.sqrt(shot_noise**2 + instrumental_noise**2)
+
+    return df
+
+
+def calculate_shot_noise_time(df, target_snr, resolution, phase_variance):
+    '''
+    Calculate the exposure time for a given SNR
+    TODO: Does not account for thermal background.
+
+    df: The planet dataset
+    target_snr: The target SNR (-)
+    resolution: The spectral resolution (-)
+    phase_variance: Phase variance due to OPD (rad**2)
+    '''
+
+    df = df.copy()
+
+    instrumental_noise = df['st_eps'] * rms_null_variation(phase_variance)
+    shot_noise = np.sqrt(resolution * (df['pl_eps'] + df['st_eps']))
+    df['shot_time_for_snr'] = (target_snr / df['pl_eps'] *
+                               np.sqrt(shot_noise**2 + instrumental_noise**2))**2
+
+    return df
+
+
+def determine_visibility(df, pointing_range, max_integration_time,
+                         minimum_instantaneous_snr):
+    '''
+    Assign a visibility tag to each planet.
+
+    df: The planet dataset
+    pointing_range: The off zenith pointing angle (rad)
+    max_integration_time: The maximum allowable integration time (s)
+    minimum_instantaneous_snr: The minimum planet-star contrast (-)
+    '''
+    df = df.copy()
+
+    # Create an indexing series that is all True
+    # TODO: Find a more robust way to do this
+    visible_selector = df['pl_name'] != ''
+
+    out_of_for_selector = df['sy_sepang'] > pointing_range
+    visible_selector &= ~out_of_for_selector
+
+    low_snr_selector = ((df['pl_eps'] / df['st_eps']) <
+                        minimum_instantaneous_snr) & visible_selector
+    visible_selector &= ~low_snr_selector
+
+    excessive_integration_selector = (
+        df['shot_time_for_snr'] > max_integration_time) & visible_selector
+    visible_selector &= ~excessive_integration_selector
+
+    df.loc[out_of_for_selector, 'visibility'] = Visibility.OUT_OF_FOR
+    df.loc[low_snr_selector, 'visibility'] = Visibility.SNR_TOO_LOW
+    df.loc[excessive_integration_selector,
+           'visibility'] = Visibility.INT_TOO_LONG
+    df.loc[visible_selector, 'visibility'] = Visibility.VISIBLE
+
+    return df
+
+
+def plot_visibility(df):
+    fig = gpho.Figure()
     fig.update_layout(scene_aspectmode='data')
 
     # ICRS origin
-    fig.add_scatter3d(x=[0], y=[0], z=[0], name='ICRS Origin',
-                      mode='markers', row=1, col=1)
+    fig.add_scatter3d(x=[0], y=[0], z=[0], name='ICRS Origin', mode='markers')
 
     # Earth North Pole
     fig.add_scatter3d(x=[0], y=[0], z=[1],
-                      name='Earth North Pole', mode='markers', row=1, col=1)
+                      name='Earth North Pole', mode='markers')
 
     # Moon south pole
-    fig.add_scatter3d(x=[mn_spole[0]], y=[mn_spole[1]],
-                      z=[mn_spole[2]], name='Moon South Pole',
-                      mode='markers', row=1, col=1)
+    lun_south = south_pole()
+    fig.add_scatter3d(x=[lun_south[0]], y=[lun_south[1]], z=[
+                      lun_south[2]], name='Moon South Pole', mode='markers')
 
     # Objects out of Field of Regard
     xyz_oof = np.stack(
-        ds.loc[ds['visibility'] == Visibility.OUT_OF_FOR, 'pt_vect']).T
+        df.loc[df['visibility'] == Visibility.OUT_OF_FOR, 'sy_ptvect']).T
     fig.add_scatter3d(x=xyz_oof[0], y=xyz_oof[1], z=xyz_oof[2],
-                      name='Out of FOR', mode='markers', opacity=0.1, row=1, col=1)
+                      name='Out of FOR', mode='markers', opacity=0.1)
 
-    # Objects with excessive integration times
-    xyz_int = np.stack(
-        ds.loc[ds['visibility'] == Visibility.INT_TOO_LONG, 'pt_vect']).T
-    fig.add_scatter3d(x=xyz_int[0], y=xyz_int[1], z=xyz_int[2],
-                      name='Integration Too Long', mode='markers', row=1, col=1)
+    # Low SNR objects
+    xyz_low = np.stack(
+        df.loc[df['visibility'] == Visibility.SNR_TOO_LOW, 'sy_ptvect']).T
+    fig.add_scatter3d(x=xyz_low[0], y=xyz_low[1], z=xyz_low[2],
+                      name='SNR Too Low', mode='markers', opacity=0.1)
+
+    # Integration too long
+    xyz_lng = np.stack(
+        df.loc[df['visibility'] == Visibility.INT_TOO_LONG, 'sy_ptvect']).T
+    fig.add_scatter3d(x=xyz_lng[0], y=xyz_lng[1], z=xyz_lng[2],
+                      name='SNR Too Low', mode='markers', opacity=0.1)
 
     # Visible objects
     xyz_vis = np.stack(
-        ds.loc[ds['visibility'] == Visibility.VISIBLE, 'pt_vect']).T
-    fig.add_scatter3d(x=xyz_vis[0], y=xyz_vis[1], z=xyz_vis[2],
-                      name='Visible', mode='markers', row=1, col=1)
+        df.loc[df['visibility'] == Visibility.VISIBLE, 'sy_ptvect']).T
+    fig.add_scatter3d(x=xyz_vis[0], y=xyz_vis[1],
+                      z=xyz_vis[2], name='Visible', mode='markers')
 
-    # Integration times vs distance
+    return fig
+
+
+def plot_integration_visibility(df):
+    fig = gpho.Figure()
+
     fig.update_yaxes(type='log', row=1, col=2)
-    dist_int = ds.loc[(ds['visibility'] == Visibility.VISIBLE) | (
-        ds['visibility'] == Visibility.INT_TOO_LONG), ['sy_dist', 't_int']]
-    fig.add_scatter(x=dist_int['sy_dist'],
-                    y=dist_int['t_int'], mode='markers', row=1, col=2)
+    int_too_long = df.loc[(df['visibility'] == Visibility.VISIBLE) | (
+        df['visibility'] == Visibility.INT_TOO_LONG)]
+    fig.add_scatter(x=int_too_long['sy_dist'],
+                    y=int_too_long['shot_time_for_snr'], mode='markers', row=1, col=2)
 
-    if show_figs:
-        fig.show()
+    return fig
+
+
+if __name__ == '__main__':
+    df = load_dataset(data_path)
+    df = calculate_southern_zenith_angle(df)
+    df = calculate_emissions(df)
+    df = calculate_local_fluxes(df)
+    df = calculate_nulling(df, 10E-6, 100, 0, 0)
+    df = calculate_detections(df, 1, 1, 1)
+    df = calculate_shot_noise_time(df, 5, 300, 1.5E-9/10E-6)
+    df = determine_visibility(df, radians(40), 60*60, 5)
+    print(df['visibility'].value_counts())
+    plot_visibility(df).show()
+
+# TODO: No planets are not visible due to excessive integration time. This does not match the previous model.
+# TODO: Port the unit test harness and achieve full coverage
+# TODO: Add all necessary plots and possible Monte-Carlos
