@@ -8,13 +8,16 @@ from matplotlib.animation import FuncAnimation
 
 s = np.sign
 
-Tmax = 6
+Tmax = 100
 stopLinear = Tmax
 stopToZero = Tmax
 randomFreq=0
 timestep = 0.001 # do not change
+bodyWidth = 1.5
+initialRotation = math.radians(0)
+initialDisplacement = 0.0
 
-debug = True
+debug = False
 plot = True
 animate = True
 save = False
@@ -33,16 +36,15 @@ kRover = 1000000000
 
 # k2 must be less than 40*k1 or 40*k2 
 k1 = 200
-k2 = k1
-k3 = k1
+k2 = 200
+k3 = 200
 
-c1 = 0.9*m
-c2 = 0.9*m
-c3 = 0.9*m
+c1 = 0.99*m
+c2 = 0.99*m
+c3 = 0.99*m
 
-s1 = s(l1)
-s2 = s(l2)
-s3 = 1
+print(f"Keq = {k1+k2+k3}")
+print(f"Ceq = {1/((1/c1)+(1/c2)+(1/c3))}")
 
 maxBaseFreqHz = 21
 
@@ -56,12 +58,12 @@ print(f"Spring natural freq = {np.sqrt(k1/m)}")
 A = np.array([[0, 1, 0, 0],
               [-(k1+k2+k3)/m, -(c1+c2+c3)/m, (k1*l1 + k2*l2 + k3*l3)/m, (c1*l1 + c2*l2 + c3*l3)/m],
               [0, 0, 0, 1],
-              [(s1*k1*l1 + s2*k2*l2 + s3*k3*l3)/J, (s1*c1*l1 + s2*c2*l2 + s3*c3*l3)/J, -(s1*k1*l1*l1 + s2*k2*l2*l2 + s3*k3*l3*l3)/J, -(s1*c1*l1*l1 + s2*c2*l2*l2 + s3*c3*l3*l3)/J]])
+              [(k1*l1 + k2*l2 + k3*l3)/J, (c1*l1 + c2*l2 + c3*l3)/J, -(k1*l1*l1 + k2*l2*l2 + k3*l3*l3)/J, -(c1*l1*l1 + c2*l2*l2 + c3*l3*l3)/J]])
 
 B = np.array([[0,0,0,0,0,0],
               [c1/m, c2/m, c3/m, k1/m, k2/m, k3/m],
               [0,0,0,0,0,0],
-              [-(s1*c1*l1)/J, -(s2*c2*l2)/J, -(s3*c3*l3)/J, -(s1*k1*l1)/J, -(s2*k2*l2)/J, -(s3*k3*l3)/J]])
+              [-(c1*l1)/J, -(c2*l2)/J, -(c3*l3)/J, -(k1*l1)/J, -(k2*l2)/J, -(k3*l3)/J]])
 
 # u = [z1dot, z2dot, z3dot, z1, z2, z3]
 
@@ -79,7 +81,6 @@ if debug:
     print("Start Matrix unit test")
     print("A thetadotdot", A[3])
     print("B thetadotdot", B[3])
-    print(f"s1 = {s1}, s2 = {s2}, s3 = {s3},")
     print("End Matrix unit test")
 
 def wave(t, phase=0, bump=0, stop=Tmax, stop2=Tmax):
@@ -109,8 +110,6 @@ bump1 = 0.0
 bump2 = 0.0
 bump3 = 0.0
 
-initialRotation = 0
-
 waveW1 = wave(T, phase1, bump=bump1, stop=int(stopLinear), stop2=int(stopToZero)).tolist()
 waveW2 = wave(T, phase2, bump=bump2, stop=int(stopLinear), stop2=int(stopToZero)).tolist()
 waveW3 = wave(T, phase3, bump=bump3, stop=int(stopLinear), stop2=int(stopToZero)).tolist()
@@ -120,12 +119,13 @@ U = np.concatenate((waveW1, waveW2, waveW3), axis=0)
 ss = cm.StateSpace(A, B, C, D)
 cm.damp(ss)
 
-TT, yout, xout = cm.forced_response(ss, T=T, X0=[0, 0, initialRotation, 0], U=U, return_x=True)
+TT, yout, xout = cm.forced_response(ss, T=T, X0=[initialDisplacement, 0, initialRotation, 0], U=U, return_x=True)
 
 dis = list(yout[0])
 vel = list(yout[1])
 angdis = list(np.round(np.degrees(yout[2]), 15))
 angvel = list(np.round(np.degrees(yout[3]), 15))
+angvelRads = list(np.round(yout[3], 15))
 
 ### Plotting
 fig, axs = plt.subplots(2, 2)
@@ -142,11 +142,13 @@ axs[0, 1].plot(T, vel, label="velocity", color="tab:blue")
 
 axs[1, 0].plot(T, angdis, label="ang displacement", color="tab:blue")
 
-axs[1, 1].plot(T[100::], (np.gradient(angvel)/timestep)[100::], label="ang accelleration", color="g")
+axs[1, 1].plot(T[500::], (np.gradient(angvel)/timestep)[500::], label="ang accelleration", color="g")
 axs[1, 1].plot(T, angvel, label="ang velocity", color="tab:blue")
 
-accelAx.plot(T[100::], (np.gradient(waveW1[1])/timestep)[100::], label="surface accelleration", color="orange")
-accelAx.plot(T[100::], (np.gradient(vel)/timestep)[100::], label="accelleration", color="g")
+totalAccelleration = -((np.gradient(angvelRads)/timestep)[500::] * (bodyWidth/2)) + (np.gradient(vel)/timestep)[500::]
+accelAx.plot(T[500::], (np.gradient(waveW1[1])/timestep)[500::], label="surface accelleration", color="orange")
+accelAx.plot(T[500::], totalAccelleration, label="max accelleration", color="r")
+accelAx.plot(T[500::], (np.gradient(vel)/timestep)[500::], label="accelleration", color="g")
 
 axs[0, 0].legend(loc="lower right")
 axs[0, 1].legend(loc="lower right")
