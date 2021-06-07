@@ -123,9 +123,19 @@ TT, yout, xout = cm.forced_response(ss, T=T, X0=[initialDisplacement, 0, initial
 
 dis = list(yout[0])
 vel = list(yout[1])
+accel = (np.gradient(vel)/timestep)
 angdis = list(np.round(np.degrees(yout[2]), 15))
 angvel = list(np.round(np.degrees(yout[3]), 15))
+angAccell = (np.gradient(angvel)/timestep)
+surfaceAccel = (np.gradient(waveW1[1])/timestep)
 angvelRads = list(np.round(yout[3], 15))
+angAccelRads = (np.gradient(angvelRads)/timestep)
+totalAccelleration = -(angAccelRads * (bodyWidth/2)) + accel
+
+tips = tipfinder(accel[500:])
+calcFreq = getFreq(accel[500:])
+print(f"Freq = {round(calcFreq, 3)} Hz")
+print(f"Max accel = {round(max(accel), 3)}")
 
 ### Plotting
 fig, axs = plt.subplots(2, 2)
@@ -142,13 +152,13 @@ axs[0, 1].plot(T, vel, label="velocity", color="tab:blue")
 
 axs[1, 0].plot(T, angdis, label="ang displacement", color="tab:blue")
 
-axs[1, 1].plot(T[500::], (np.gradient(angvel)/timestep)[500::], label="ang accelleration", color="g")
+axs[1, 1].plot(T[500::], angAccell[500::], label="ang accelleration", color="g")
 axs[1, 1].plot(T, angvel, label="ang velocity", color="tab:blue")
 
-totalAccelleration = -((np.gradient(angvelRads)/timestep)[500::] * (bodyWidth/2)) + (np.gradient(vel)/timestep)[500::]
-accelAx.plot(T[500::], (np.gradient(waveW1[1])/timestep)[500::], label="surface accelleration", color="orange")
-accelAx.plot(T[500::], totalAccelleration, label="max accelleration", color="r")
-accelAx.plot(T[500::], (np.gradient(vel)/timestep)[500::], label="accelleration", color="g")
+accelAx.plot(T[500::], surfaceAccel[500::], label="surface accelleration", color="orange")
+accelAx.plot(T[500::], totalAccelleration[500::], label="max accelleration", color="r")
+accelAx.plot(T[500::], accel[500::], label="accelleration", color="g")
+accelAx.scatter(tips, [accel[500::][int(x/1000)] for x in tips], label="tips", color="r")
 
 axs[0, 0].legend(loc="lower right")
 axs[0, 1].legend(loc="lower right")
