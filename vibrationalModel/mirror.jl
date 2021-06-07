@@ -45,7 +45,7 @@ n = 1
 println("18 segments, Mirror diameter: ", mirrorDiameter, "m")
 println("r = ", a, "m E = ", E, "GPa v = ", v, " h = ", h, "m ρ = ", ρ, "kg/m^3")
 println()
-for s in 0:1:10
+for s in 0:1:10  
     local λ = lmbda(n, s)
     local ω = omega(λ, a, ρ, DD)/ 2pi
     print("ω= ")
@@ -55,4 +55,7 @@ for s in 0:1:10
     print(", s=")
     print(s)
     println(", f_",n,"/",s)
+    """
+    YES IM A 10X Programmer
+    """
 end
