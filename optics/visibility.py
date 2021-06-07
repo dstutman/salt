@@ -92,7 +92,7 @@ def rms_null_variation(phs_var, frac_inten_var=0):
 # Main functionality
 
 
-def load_dataset(path, only_uncontroversial=True, only_confirmed=True):
+def load_dataset(path, only_uncontroversial=True, only_confirmed=True, only_unary=True, only_solitary=True):
     '''
     Load a NASA Exoplanet Database dataset and performs basic filtering.
 
@@ -101,22 +101,27 @@ def load_dataset(path, only_uncontroversial=True, only_confirmed=True):
     only_confirmed: Filter out unconfirmed planets
     '''
     df = pd.read_csv(path, comment='#', usecols=[
-                     'soltype', 'pl_controv_flag', 'ra', 'dec', 'sy_dist',
+                     'soltype', 'pl_controv_flag', 'sy_snum', 'sy_pnum', 'ra', 'dec', 'sy_dist',
                      'pl_name', 'pl_rade', 'pl_eqt', 'st_teff', 'st_rad'])
-
     df['pl_controv_flag'] = df['pl_controv_flag'] == 1.0
+    df[['ra', 'dec']] *= sconst.degree
+    df['sy_dist'] *= sconst.parsec
+    df['st_rad'] *= sun_radius
+    df['pl_rade'] *= earth_radius
+
     if only_uncontroversial:
         df = df[~df['pl_controv_flag']]
 
     if only_confirmed:
         df = df[df['soltype'] == 'Published Confirmed']
 
-    df = df.dropna()
+    if only_unary:
+        df = df[df['sy_snum'] == 1]
 
-    df[['ra', 'dec']] *= sconst.degree
-    df['sy_dist'] *= sconst.parsec
-    df['st_rad'] *= sun_radius
-    df['pl_rade'] *= earth_radius
+    if only_solitary:
+        df = df[df['sy_pnum'] == 1]
+
+    df = df.dropna()
 
     df = df.rename(columns={'pl_rade': 'pl_rad', 'ra': 'sy_ra',
                    'dec': 'sy_dec', 'pl_eqt': 'pl_temp', 'st_teff': 'st_temp'})
@@ -366,9 +371,9 @@ if __name__ == '__main__':
     df = calculate_southern_zenith_angle(df)
     df = calculate_emissions(df)
     df = calculate_local_fluxes(df)
-    df = calculate_nulling(df, 10E-6, 100, 0, 0)
-    df = calculate_detections(df, 1, 1, 1)
-    df = calculate_shot_noise_time(df, 5, 300, 1.5E-9/10E-6)
+    df = calculate_nulling(df, 10E-6, 1000, 0, 0)
+    df = calculate_detections(df, 3, 1, 1)
+    df = calculate_shot_noise_time(df, 5, 300, 2*pi*1.5E-9/10E-6)
     df = determine_visibility(df, radians(40), 60*60, 5)
     print(df['visibility'].value_counts())
     plot_visibility(df).show()
