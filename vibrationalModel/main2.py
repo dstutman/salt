@@ -46,11 +46,12 @@ c3 = 0.99*m
 
 print(f"Keq = {k1+k2+k3}")
 print(f"Ceq = {1/((1/c1)+(1/c2)+(1/c3))}")
+print(f"Ceq/m = {(1/((1/c1)+(1/c2)+(1/c3)))/m}")
 
 maxBaseFreqHz = 21
 
 baseFreqHz = min(np.sqrt(kRover/m), maxBaseFreqHz)
-baseFreq = baseFreqHz/ (2 * math.pi)
+baseFreq = baseFreqHz * (2 * math.pi)
 
 print(f"Spring natural freq = {np.sqrt(k1/m)}")
 
