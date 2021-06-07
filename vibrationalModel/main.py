@@ -7,7 +7,8 @@ import scipy as sc
 
 # Wave function
 def wave(t):
-    baseFreq = 8  # radians/second
+    baseFreqHz = 21
+    baseFreq = baseFreqHz * (2 * math.pi)
     maxAmplitude = 0.02
 
     wave = maxAmplitude * np.sin(t*baseFreq)
@@ -17,9 +18,9 @@ def wave(t):
 
 
 # Constant values
-m = 450
-ks = 0.2
-damp = m
+m = 1500/6
+ks = 600
+damp = 247.5
 Tmax = 10
 dc = damp/m
 
@@ -44,7 +45,7 @@ U = wave(T)
 
 ss = cm.StateSpace(A, B, C, D)
 
-_, yout, xout = cm.forced_response(ss, T=T, X0=[0,0], U = U, return_x=True)
+_, yout, xout = cm.forced_response(ss, T=T, X0=[0,0],U=U, return_x=True)
 
 
 dis = list(yout[0])
@@ -61,7 +62,7 @@ axs[0].plot(T, U[0], label="moonquake displacement", linestyle="--")
 axs[0]
 
 axs[1].plot(T, vel, label="velocity")
-axs[1].plot(T, wave(T)[1], label="moonquake velocity", linestyle="--")
+axs[1].plot(T, U[1], label="moonquake velocity", linestyle="--")
 
 axs[0].legend()
 axs[1].legend()
