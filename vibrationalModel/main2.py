@@ -5,10 +5,11 @@ import control as cm
 import math
 import scipy as sc
 from matplotlib.animation import FuncAnimation
+from tipfinder import tipfinder, getFreq
 
 s = np.sign
 
-Tmax = 100
+Tmax = 15
 stopLinear = Tmax
 stopToZero = Tmax
 randomFreq=0
@@ -28,9 +29,9 @@ maxAmplitude = 0.02  # [m]
 m = 1500/2
 J = 125 # = 56.55cos(11deg) + 70.3cos(11deg) (ixx+iyy)
 
-l1 = 1.2
-l2 = 0.2
-l3 = -1.2
+l1 = 0.85
+l2 = 0
+l3 = -l1
 
 kRover = 1000000000
 
