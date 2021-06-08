@@ -1,15 +1,16 @@
 import plotly.subplots as sbplt
 import plotly.graph_objects as gpho
 from pathlib import Path
-from math import pi, radians
+from math import pi, radians, exp
 from enum import Enum, auto
 import scipy.constants as sconst
 import pandas as pd
 import numpy as np
 import numpy.linalg as la
+from scipy.constants import constants
 
 # Configuration
-data_path = Path('Datasets/PS_2021.05.20_08.13.20.csv')
+data_path = Path('Datasets/PS_2021.06.08_01.44.53.csv')
 
 # Constants
 sun_radius = 695508E3  # https://solarsystem.nasa.gov/solar-system/sun/by-the-numbers/
@@ -88,6 +89,49 @@ def rms_null_variation(phs_var, frac_inten_var=0):
     '''
     return np.sqrt((phs_var**2 + frac_inten_var**2)/8)
 
+
+def plancks_law(wavelength, T):
+    '''
+    Calculate the spectral intensity at a given wavelength for a given temperature (W/m**2/m).
+
+    wavelength: Wavelength (m)
+    T: Black-body temperature (K)
+    '''
+    return 2 * constants.h * constants.c**2 / wavelength**5 * 1 / (np.exp(constants.h * constants.c / constants.k / wavelength / T) - 1)  # http://rossby.msrc.sunysb.edu/~marat/MAR542/ATM542-Chapter2.pdf
+
+
+# def lowest_intensity_wavelength(T, lower=6E-6, upper=20E-6):
+#    '''
+#    Calculate the lowest spectral intensity wavelength in a band (m).
+#
+#    This is guaraunteed to give the global minimum within the band
+#    because Wein's law is monotonically non-increasing when viewed
+#    from the peak to each spectral bound.
+#    T: Black-body temperature (K)
+#    lower: The lower bound of the band (m)
+#    upper: The upper bound of the band (m)
+#    '''
+#    low_intensities = plancks_law(lower, T)
+#    up_intensities =  plancks_law(upper, T)
+#    selector = low_intensities < up_intensities
+#    ret = np.zeros(len(selector))
+#    ret[selector] = lower
+#    ret[~selector] = upper
+#    #if plancks_law(lower, T) < plancks_law(upper, T):
+#    #    return lower
+#    #else:
+#    #    return upper
+
+
+def weins_law(T):
+    '''
+    Calculate the wavelength emission peak (m).
+
+    T: Black-body temperature (K)
+    '''
+    return 2897 / T * 1E-6  # http://rossby.msrc.sunysb.edu/~marat/MAR542/ATM542-Chapter2.pdf
+
+
 # Main functionality
 
 
@@ -101,7 +145,9 @@ def load_dataset(path, only_uncontroversial=True, only_confirmed=True, only_unar
     '''
     df = pd.read_csv(path, comment='#', usecols=[
                      'soltype', 'pl_controv_flag', 'sy_snum', 'sy_pnum', 'ra', 'dec', 'sy_dist',
-                     'pl_name', 'pl_rade', 'pl_eqt', 'st_teff', 'st_rad'])
+                     'pl_name', 'pl_rade', 'pl_eqt', 'st_rad', 'st_teff'])
+    df = df.dropna()
+
     df['pl_controv_flag'] = df['pl_controv_flag'] == 1.0
     df[['ra', 'dec']] *= sconst.degree
     df['sy_dist'] *= sconst.parsec
@@ -119,8 +165,6 @@ def load_dataset(path, only_uncontroversial=True, only_confirmed=True, only_unar
 
     if only_solitary:
         df = df[df['sy_pnum'] == 1]
-
-    df = df.dropna()
 
     df = df.rename(columns={'pl_rade': 'pl_rad', 'ra': 'sy_ra',
                    'dec': 'sy_dec', 'pl_eqt': 'pl_temp', 'st_teff': 'st_temp'})
@@ -149,19 +193,43 @@ def calculate_southern_zenith_angle(df):
     return df
 
 
-def calculate_emissions(df, wavelength=10E-6):
+def calculate_worst_wavelength(df, lowest=6E-6, highest=20E-6):
+    df = df.copy()
+
+    lower_intensities = plancks_law(lowest, df['pl_temp'])
+    upper_intensities = plancks_law(highest, df['pl_temp'])
+    selector = lower_intensities < upper_intensities
+
+    df.loc[selector, 'worst_wavelength'] = lowest
+    df.loc[~selector, 'worst_wavelength'] = highest
+    df['spectral_oneband_width'] = highest - lowest
+    print(df['worst_wavelength'])
+    return df
+
+
+def calculate_emissions(df, resolution=300):
     '''
     Calculate the emission powers of stars and planets in photons per second.
+    Uses the worst case intensity band.
 
     df: The planet dataset
+    resolution: The spectral resolution (-)
+
     '''
 
     df = df.copy()
 
-    pl_wattage = blackbody_flux(df['pl_temp']) * sphere_area(df['pl_rad'])
-    st_wattage = blackbody_flux(df['st_temp']) * sphere_area(df['st_rad'])
-    df['pl_phps'] = pl_wattage / photon_energy(wavelength)
-    df['st_phps'] = st_wattage / photon_energy(wavelength)
+    pl_wattage = sphere_area(df['pl_rad']) * \
+        plancks_law(df['worst_wavelength'], df['pl_temp']) * \
+        df['spectral_oneband_width']
+    st_wattage = sphere_area(df['st_rad']) * \
+        plancks_law(df['worst_wavelength'], df['st_temp']) * \
+        df['spectral_oneband_width']
+
+    # pl_wattage = blackbody_flux(df['pl_temp']) * sphere_area(df['pl_rad'])
+    # st_wattage = blackbody_flux(df['st_temp']) * sphere_area(df['st_rad'])
+    df['pl_phps'] = pl_wattage / photon_energy(df['worst_wavelength'])
+    df['st_phps'] = st_wattage / photon_energy(df['worst_wavelength'])
 
     return df
 
@@ -202,6 +270,7 @@ def calculate_nulling(df, wavelength, baseline, phase_variance,
 
     return df
 
+
 def force_nulling(df, nulling):
     '''
     Force the nulling to the specified value.
@@ -212,8 +281,9 @@ def force_nulling(df, nulling):
     df = df.copy()
 
     df['st_nulldepth'] = nulling
-    
+
     return df
+
 
 def calculate_detections(df, mirror_radius, instrument_throughput,
                          quantum_efficiency, rotationally_modulated=True):
@@ -244,21 +314,20 @@ def calculate_detections(df, mirror_radius, instrument_throughput,
     return df
 
 
-def calculate_shot_noise_snr(df, integration_time, resolution, phase_variance):
+def calculate_shot_noise_snr(df, integration_time, phase_variance):
     '''
     Calculate the shot noise after a given integration time.
     TODO: Does not account for thermal background.
 
     df: The planet dataset
     integration_time: The allowable integration time (s)
-    resolution: The spectral resolution (-)
     phase_variance: Phase variance due to OPD (rad**2)
     '''
 
     df = df.copy()
 
     instrumental_noise = df['st_eps'] * rms_null_variation(phase_variance)
-    shot_noise = np.sqrt(resolution * (df['pl_eps'] + df['st_eps']))
+    shot_noise = np.sqrt(df['pl_eps'] + df['st_eps'])
     df['shot_snr_for_time'] = np.sqrt(
         integration_time) * df['pl_eps'] / np.sqrt(shot_noise**2 + instrumental_noise**2)
 
@@ -344,10 +413,10 @@ def plot_visibility(df):  # pragma: no cover
     fig.add_scatter3d(x=xyz_oof[0], y=xyz_oof[1], z=xyz_oof[2],
                       name='Out of FOR', mode='markers', opacity=0.1)
 
-    ## Low SNR objects
-    #xyz_low = np.stack(
+    # Low SNR objects
+    # xyz_low = np.stack(
     #    df.loc[df['visibility'] == Visibility.SNR_TOO_LOW, 'sy_ptvect']).T
-    #fig.add_scatter3d(x=xyz_low[0], y=xyz_low[1], z=xyz_low[2],
+    # fig.add_scatter3d(x=xyz_low[0], y=xyz_low[1], z=xyz_low[2],
     #                  name='SNR Too Low', mode='markers', opacity=0.1)
 
     # Integration too long
@@ -372,31 +441,33 @@ def plot_integration_visibility(df):  # pragma: no cover
     fig = gpho.Figure()
     fig.update_yaxes(type='log')
     fig.add_scatter(x=int_too_long['sy_dist'],
-                      y=int_too_long['shot_time_for_snr'], mode='markers')
+                    y=int_too_long['shot_time_for_snr'], mode='markers')
     return fig
 
-def plot_detections_diameter(df, from_dia=0.25, to_dia=3, num_samples=100):  # pragma: no cover
+
+def plot_detections_diameter(df, from_dia=0.25, to_dia=6, num_samples=100):  # pragma: no cover
     dias = np.linspace(from_dia, to_dia, num_samples)
     dets = np.zeros(num_samples)
-    
+
     for idx, dia in enumerate(dias):
         df = df.copy()
 
         df = calculate_detections(df, dia/2, 0.5, 0.3)
         df = calculate_shot_noise_time(df, 10, 300, 2*pi*1.5E-9/10E-6)
-        df = determine_visibility(df, radians(90), 60*60*30, 0)
+        df = determine_visibility(df, radians(90), 60*60*10, 0)
 
         dets[idx] = sum(df['visibility'] == Visibility.VISIBLE)
 
     fig = gpho.Figure()
     fig.add_scatter(x=dias, y=dets, mode='markers')
     return fig
-    
 
 
 if __name__ == '__main__':  # pragma: no cover
     df = load_dataset(data_path)
+    print(df)
     df = calculate_southern_zenith_angle(df)
+    df = calculate_worst_wavelength(df)
     df = calculate_emissions(df)
     df = calculate_local_fluxes(df)
     #df = calculate_nulling(df, 10E-6, 1000, 0, 0)
