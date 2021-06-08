@@ -71,13 +71,13 @@ def blackbody_flux(bd_eq_tem):
     return sconst.sigma*bd_eq_tem**4
 
 
-def photon_energy(lam):
+def photon_energy(wavelength):
     '''
     Calculate the photon energy in J/ph.
 
     lam: The wavelength (m)
     '''
-    return sconst.h*sconst.c/lam
+    return sconst.h*sconst.c/wavelength
 
 
 def rms_null_variation(phs_var, frac_inten_var=0):
@@ -193,7 +193,27 @@ def calculate_southern_zenith_angle(df):
     return df
 
 
-def calculate_worst_wavelength(df, lowest=6E-6, highest=20E-6):
+def calculate_peak_wavelength(df):
+    """
+    Calculate the highest intensity wavelength in a band (m).
+
+    df: The planet dataset
+    """
+    df = df.copy()
+
+    df['peak_wavelength'] = weins_law(df['pl_temp'])
+
+    return df
+
+
+def calculate_lowest_intensity_wavelength(df, lowest=6E-6, highest=20E-6):
+    """
+    Calculate the lowest intensity wavelength in a band (m).
+
+    df: The planet dataset
+    lowest: The lowest wavelength in the band (m)
+    highest: The highest wavelength in the band (m)
+    """
     df = df.copy()
 
     lower_intensities = plancks_law(lowest, df['pl_temp'])
@@ -202,8 +222,7 @@ def calculate_worst_wavelength(df, lowest=6E-6, highest=20E-6):
 
     df.loc[selector, 'worst_wavelength'] = lowest
     df.loc[~selector, 'worst_wavelength'] = highest
-    df['spectral_oneband_width'] = highest - lowest
-    print(df['worst_wavelength'])
+    df['spectral_oneband_width'] = (highest - lowest)/300
     return df
 
 
@@ -249,13 +268,12 @@ def calculate_local_fluxes(df):
     return df
 
 
-def calculate_nulling(df, wavelength, baseline, phase_variance,
+def calculate_nulling(df, baseline, phase_variance,
                       fractional_intensity_variance):
     '''
     Calculate the time average null depth for each system.
 
     df: The planet dataset
-    wavelength: Wavelength (m)
     baseline: Nulling baseline (m)
     phase_variance: Phase variance due to OPD (rad**2)
     fractional_intensity_variance: Fractional intensity variance due to OPA (-)
@@ -264,7 +282,7 @@ def calculate_nulling(df, wavelength, baseline, phase_variance,
     df = df.copy()
 
     st_angular_diameter = 2 * df['st_rad'] / df['sy_dist']
-    st_leakage = pi**2 / 4 * (baseline * st_angular_diameter / wavelength)**2
+    st_leakage = pi**2 / 4 * (baseline * st_angular_diameter / df['worst_wavelength'])**2
     df['st_nulldepth'] = 1 / 4 * \
         (phase_variance + st_leakage + fractional_intensity_variance)
 
@@ -334,7 +352,7 @@ def calculate_shot_noise_snr(df, integration_time, phase_variance):
     return df
 
 
-def calculate_shot_noise_time(df, target_snr, resolution, phase_variance):
+def calculate_shot_noise_time(df, target_snr, phase_variance):
     '''
     Calculate the exposure time for a given SNR
     TODO: Does not account for thermal background.
@@ -348,7 +366,7 @@ def calculate_shot_noise_time(df, target_snr, resolution, phase_variance):
     df = df.copy()
 
     instrumental_noise = df['st_eps'] * rms_null_variation(phase_variance)
-    shot_noise = np.sqrt(resolution * (df['pl_eps'] + df['st_eps']))
+    shot_noise = np.sqrt(df['pl_eps'] + df['st_eps'])
     df['shot_time_for_snr'] = (target_snr / df['pl_eps'] *
                                np.sqrt(shot_noise**2 + instrumental_noise**2))**2
 
@@ -411,7 +429,7 @@ def plot_visibility(df):  # pragma: no cover
     xyz_oof = np.stack(
         df.loc[df['visibility'] == Visibility.OUT_OF_FOR, 'sy_ptvect']).T
     fig.add_scatter3d(x=xyz_oof[0], y=xyz_oof[1], z=xyz_oof[2],
-                      name='Out of FOR', mode='markers', opacity=0.1)
+                      name='Out of FOR', mode='markers', opacity=1)
 
     # Low SNR objects
     # xyz_low = np.stack(
@@ -423,7 +441,7 @@ def plot_visibility(df):  # pragma: no cover
     xyz_lng = np.stack(
         df.loc[df['visibility'] == Visibility.INT_TOO_LONG, 'sy_ptvect']).T
     fig.add_scatter3d(x=xyz_lng[0], y=xyz_lng[1], z=xyz_lng[2],
-                      name='SNR Too Low', mode='markers', opacity=0.1)
+                      name='Int Too Long', mode='markers', opacity=1)
 
     # Visible objects
     xyz_vis = np.stack(
@@ -453,8 +471,8 @@ def plot_detections_diameter(df, from_dia=0.25, to_dia=6, num_samples=100):  # p
         df = df.copy()
 
         df = calculate_detections(df, dia/2, 0.5, 0.3)
-        df = calculate_shot_noise_time(df, 10, 300, 2*pi*1.5E-9/10E-6)
-        df = determine_visibility(df, radians(90), 60*60*10, 0)
+        df = calculate_shot_noise_time(df, 10, 2*pi*1.5E-9/10E-6)
+        df = determine_visibility(df, radians(60), 60*60*10, 0)
 
         dets[idx] = sum(df['visibility'] == Visibility.VISIBLE)
 
@@ -463,23 +481,29 @@ def plot_detections_diameter(df, from_dia=0.25, to_dia=6, num_samples=100):  # p
     return fig
 
 
+def plot_peak_wavelengths(df):  # pragma: no cover
+    fig = gpho.Figure()
+    fig.add_histogram(x=df['peak_wavelength'])
+    return fig
+
+
 if __name__ == '__main__':  # pragma: no cover
     df = load_dataset(data_path)
-    print(df)
     df = calculate_southern_zenith_angle(df)
-    df = calculate_worst_wavelength(df)
+    df = calculate_peak_wavelength(df)
+    df = calculate_lowest_intensity_wavelength(df)
     df = calculate_emissions(df)
     df = calculate_local_fluxes(df)
     #df = calculate_nulling(df, 10E-6, 1000, 0, 0)
     df = force_nulling(df, 1E-5)
-    df = calculate_detections(df, 1.5/2, 0.5, 0.3)
-    df = calculate_shot_noise_time(df, 10, 300, 2*pi*1.5E-9/10E-6)
-    df = determine_visibility(df, radians(90), 60*60*30, 0)
+    df = calculate_detections(df, 2/2, 0.5, 0.3)
+    df = calculate_shot_noise_time(df, 10, 2*pi*1.5E-9/10E-6)
+    df = determine_visibility(df, radians(60), 60*60*10, 0)
     print(df['visibility'].value_counts())
     plot_visibility(df).show()
     plot_integration_visibility(df).show()
     plot_detections_diameter(df).show()
-    plot_detections_diameter(df).write_html("det_vs_dia.html")
+    plot_peak_wavelengths(df).show()
 
 # TODO: No planets are non-observable due to excessive integration time. This doesn't match the previous model.
 # TODO: Port the unit test harness and achieve full coverage
