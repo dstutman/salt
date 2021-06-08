@@ -1,4 +1,3 @@
-from re import L
 import plotly.subplots as sbplt
 import plotly.graph_objects as gpho
 from pathlib import Path
@@ -203,6 +202,18 @@ def calculate_nulling(df, wavelength, baseline, phase_variance,
 
     return df
 
+def force_nulling(df, nulling):
+    '''
+    Force the nulling to the specified value.
+
+    df: The planet dataset
+    nulling: The desired nulling (-)
+    '''
+    df = df.copy()
+
+    df['st_nulldepth'] = nulling
+    
+    return df
 
 def calculate_detections(df, mirror_radius, instrument_throughput,
                          quantum_efficiency, rotationally_modulated=True):
@@ -311,7 +322,7 @@ def determine_visibility(df, pointing_range, max_integration_time,
     return df
 
 
-def plot_visibility(df):
+def plot_visibility(df):  # pragma: no cover
     fig = gpho.Figure()
     fig.update_layout(scene_aspectmode='data')
 
@@ -333,11 +344,11 @@ def plot_visibility(df):
     fig.add_scatter3d(x=xyz_oof[0], y=xyz_oof[1], z=xyz_oof[2],
                       name='Out of FOR', mode='markers', opacity=0.1)
 
-    # Low SNR objects
-    xyz_low = np.stack(
-        df.loc[df['visibility'] == Visibility.SNR_TOO_LOW, 'sy_ptvect']).T
-    fig.add_scatter3d(x=xyz_low[0], y=xyz_low[1], z=xyz_low[2],
-                      name='SNR Too Low', mode='markers', opacity=0.1)
+    ## Low SNR objects
+    #xyz_low = np.stack(
+    #    df.loc[df['visibility'] == Visibility.SNR_TOO_LOW, 'sy_ptvect']).T
+    #fig.add_scatter3d(x=xyz_low[0], y=xyz_low[1], z=xyz_low[2],
+    #                  name='SNR Too Low', mode='markers', opacity=0.1)
 
     # Integration too long
     xyz_lng = np.stack(
@@ -354,30 +365,51 @@ def plot_visibility(df):
     return fig
 
 
-def plot_integration_visibility(df):
-    fig = gpho.Figure()
-
-    fig.update_yaxes(type='log', row=1, col=2)
+def plot_integration_visibility(df):  # pragma: no cover
     int_too_long = df.loc[(df['visibility'] == Visibility.VISIBLE) | (
-        df['visibility'] == Visibility.INT_TOO_LONG)]
-    fig.add_scatter(x=int_too_long['sy_dist'],
-                    y=int_too_long['shot_time_for_snr'], mode='markers', row=1, col=2)
+        df['visibility'] == Visibility.INT_TOO_LONG), ['sy_dist', 'shot_time_for_snr']]
 
+    fig = gpho.Figure()
+    fig.update_yaxes(type='log')
+    fig.add_scatter(x=int_too_long['sy_dist'],
+                      y=int_too_long['shot_time_for_snr'], mode='markers')
     return fig
 
+def plot_detections_diameter(df, from_dia=0.25, to_dia=3, num_samples=100):  # pragma: no cover
+    dias = np.linspace(from_dia, to_dia, num_samples)
+    dets = np.zeros(num_samples)
+    
+    for idx, dia in enumerate(dias):
+        df = df.copy()
 
-if __name__ == '__main__':
+        df = calculate_detections(df, dia/2, 0.5, 0.3)
+        df = calculate_shot_noise_time(df, 10, 300, 2*pi*1.5E-9/10E-6)
+        df = determine_visibility(df, radians(90), 60*60*30, 0)
+
+        dets[idx] = sum(df['visibility'] == Visibility.VISIBLE)
+
+    fig = gpho.Figure()
+    fig.add_scatter(x=dias, y=dets, mode='markers')
+    return fig
+    
+
+
+if __name__ == '__main__':  # pragma: no cover
     df = load_dataset(data_path)
     df = calculate_southern_zenith_angle(df)
     df = calculate_emissions(df)
     df = calculate_local_fluxes(df)
-    df = calculate_nulling(df, 10E-6, 1000, 0, 0)
-    df = calculate_detections(df, 3, 1, 1)
-    df = calculate_shot_noise_time(df, 5, 300, 2*pi*1.5E-9/10E-6)
-    df = determine_visibility(df, radians(40), 60*60, 5)
+    #df = calculate_nulling(df, 10E-6, 1000, 0, 0)
+    df = force_nulling(df, 1E-5)
+    df = calculate_detections(df, 1.5/2, 0.5, 0.3)
+    df = calculate_shot_noise_time(df, 10, 300, 2*pi*1.5E-9/10E-6)
+    df = determine_visibility(df, radians(90), 60*60*30, 0)
     print(df['visibility'].value_counts())
     plot_visibility(df).show()
+    plot_integration_visibility(df).show()
+    plot_detections_diameter(df).show()
+    plot_detections_diameter(df).write_html("det_vs_dia.html")
 
-# TODO: No planets are not visible due to excessive integration time. This does not match the previous model.
+# TODO: No planets are non-observable due to excessive integration time. This doesn't match the previous model.
 # TODO: Port the unit test harness and achieve full coverage
 # TODO: Add all necessary plots and possible Monte-Carlos
