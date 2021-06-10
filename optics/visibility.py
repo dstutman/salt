@@ -23,7 +23,7 @@ lun_north_dec = radians(66.5392)  # Lunar celestial north declination
 
 class Visibility(Enum):
     '''Defines the possible visibility modifiers.'''
-
+    HIDDEN = auto()
     VISIBLE = auto()
     OUT_OF_FOR = auto()
     OUT_OF_RANGE = auto()
@@ -373,7 +373,7 @@ def calculate_shot_noise_time(df, target_snr, phase_variance):
     return df
 
 
-def determine_visibility(df, pointing_range, max_integration_time,
+def determine_visibility(df, pointing_range, plotting_range, max_integration_time,
                          minimum_instantaneous_snr):
     '''
     Assign a visibility tag to each planet.
@@ -392,6 +392,9 @@ def determine_visibility(df, pointing_range, max_integration_time,
     out_of_for_selector = df['sy_sepang'] > pointing_range
     visible_selector &= ~out_of_for_selector
 
+    out_of_plot_selector = df['sy_sepang'] > plotting_range
+    visible_selector &= ~out_of_for_selector
+
     low_snr_selector = ((df['pl_eps'] / df['st_eps']) <
                         minimum_instantaneous_snr) & visible_selector
     visible_selector &= ~low_snr_selector
@@ -402,6 +405,7 @@ def determine_visibility(df, pointing_range, max_integration_time,
 
     df.loc[out_of_for_selector, 'visibility'] = Visibility.OUT_OF_FOR
     df.loc[low_snr_selector, 'visibility'] = Visibility.SNR_TOO_LOW
+    df.loc[out_of_plot_selector, 'visibility'] = Visibility.HIDDEN
     df.loc[excessive_integration_selector,
            'visibility'] = Visibility.INT_TOO_LONG
     df.loc[visible_selector, 'visibility'] = Visibility.VISIBLE
@@ -411,7 +415,7 @@ def determine_visibility(df, pointing_range, max_integration_time,
 
 def plot_visibility(df):  # pragma: no cover
     fig = gpho.Figure()
-    fig.update_layout(scene_aspectmode='data')
+    fig.update_layout(template='simple_white', title=dict(text='Celestial Visibility', xanchor='center', x=0.5), scene=dict(aspectmode='data', xaxis=dict(showticklabels=False), yaxis=dict(showticklabels=False), zaxis=dict(showticklabels=False)), scene_camera=dict(eye=dict(x=-0.25, y=-0.25, z=2)))
 
     # ICRS origin
     fig.add_scatter3d(x=[0], y=[0], z=[0], name='ICRS Origin', mode='markers')
@@ -457,6 +461,8 @@ def plot_integration_visibility(df):  # pragma: no cover
         df['visibility'] == Visibility.INT_TOO_LONG), ['sy_dist', 'shot_time_for_snr']]
 
     fig = gpho.Figure()
+    fig.update_layout(template='simple_white', title=dict(text='Integration Time vs Distance', xanchor='center', x=0.5), xaxis_title='Distance (pc)', yaxis_title='Integration Time (s)')
+
     fig.update_yaxes(type='log')
     fig.add_scatter(x=int_too_long['sy_dist'],
                     y=int_too_long['shot_time_for_snr'], mode='markers')
@@ -472,17 +478,19 @@ def plot_detections_diameter(df, from_dia=0.25, to_dia=6, num_samples=100):  # p
 
         df = calculate_detections(df, dia/2, 0.5, 0.3)
         df = calculate_shot_noise_time(df, 10, 2*pi*1.5E-9/10E-6)
-        df = determine_visibility(df, radians(60), 60*60*10, 0)
+        df = determine_visibility(df, radians(60), radians(90), 60*60*10, 0)
 
         dets[idx] = sum(df['visibility'] == Visibility.VISIBLE)
 
     fig = gpho.Figure()
+    fig.update_layout(template='simple_white', title=dict(text='Visible Planets vs Mirror Diameter', xanchor='center', x=0.5), xaxis_title='Mirror Diameter (m)', yaxis_title='Visible Planets (-)')
     fig.add_scatter(x=dias, y=dets, mode='markers')
     return fig
 
 
 def plot_peak_wavelengths(df):  # pragma: no cover
     fig = gpho.Figure()
+    fig.update_layout(template='simple_white', title=dict(text='Spectral Peak Occurrence Rate', xanchor='center', x=0.5))
     fig.add_histogram(x=df['peak_wavelength'])
     return fig
 
@@ -498,24 +506,24 @@ if __name__ == '__main__':  # pragma: no cover
     df = force_nulling(df, 1E-5)
     df = calculate_detections(df, 2/2, 0.5, 0.3)
     df = calculate_shot_noise_time(df, 10, 2*pi*1.5E-9/10E-6)
-    df = determine_visibility(df, radians(60), 60*60*10, 0)
+    df = determine_visibility(df, radians(60), radians(90), 60*60*10, 0)
     print(df['visibility'].value_counts())
     vis = plot_visibility(df)
     vis.show()
-    vis.write_html('out/visibility.html')
-    vis.write_image('out/visibility.svg')
+    vis.write_html('out/celestial_visibility.html')
+    vis.write_image('out/celestial_visibility.svg')
     int_vis = plot_integration_visibility(df)
     int_vis.show()
-    int_vis.write_html('out/int_vis.html')
-    int_vis.write_image('out/int_vis.svg')
+    int_vis.write_html('out/integration_vs_distance.html')
+    int_vis.write_image('out/integration_vs_distance.svg')
     det_dia = plot_detections_diameter(df)
     det_dia.show()
-    det_dia.write_html('out/det_dia.html')
-    det_dia.write_image('out/det_dia.svg')
+    det_dia.write_html('out/visibility_vs_diameter.html')
+    det_dia.write_image('out/visibility_vs_diameter.svg')
     peaks = plot_peak_wavelengths(df)
-    peaks.write_html('out/peaks.html')
-    peaks.write_image('out/peaks.svg')
+    peaks.write_html('out/spectral_peaks.html')
+    peaks.write_image('out/spectral_peaks.svg')
 
-# TODO: No planets are non-observable due to excessive integration time. This doesn't match the previous model.
 # TODO: Port the unit test harness and achieve full coverage
 # TODO: Add all necessary plots and possible Monte-Carlos
+# TODO: Add plot details like titles and axis names
