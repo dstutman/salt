@@ -8,10 +8,10 @@ ax = Axes3D(fig)
 ax.set_facecolor("k")
 plt.axis('off')
 
-observationstation = np.array([-47, -30,-1.5])
+observationstation = np.array([-47, -30,-3.2])
 sverdrupstation = np.array([-11.41, -11.02, 2.5])
 malapertstation = np.array([120, 6.3, 1.5])
-observationpowerstation = np.array([-59.7, -14.4, 1.6])
+observationpowerstation = np.array([-59.7, -14.4, 1])
 earthspherical = np.array([0,0,1000])
 
 # Celestial bodies | Moon
@@ -107,11 +107,11 @@ ax.plot(comm_malapert_earth[:,0],
         comm_malapert_earth[:,1],
         comm_malapert_earth[:,2], c="w", ls="--", zorder=9)
 
-# Power | power station to observation station
-pow_ob = np.vstack((observationstation, observationpowerstation))
-ax.plot(pow_ob[:,0],
-        pow_ob[:,1],
-        pow_ob[:,2], c="r", ls="--", zorder=9)
+# # Power | power station to observation station
+# pow_ob = np.vstack((observationstation, observationpowerstation))
+# ax.plot(pow_ob[:,0],
+#         pow_ob[:,1],
+#         pow_ob[:,2], c="r", ls="--", zorder=9)
 
 
 # Communication | station markers
@@ -125,14 +125,14 @@ ax.scatter(observationstation[0], observationstation[1], observationstation[2],
 
 ax.scatter(malapertstation[0], malapertstation[1], malapertstation[2],
            c="b", marker='^', zorder=13,
-           label="Observation Station", depthshade=False)
+           label="Malapert Comm. Station", depthshade=False)
 
 ax.scatter(earthcartisian[0], earthcartisian[1], earthcartisian[2],
            c="c", marker="^", zorder=13,
            label="Earth Receiving Station", depthshade=False)
-ax.scatter(observationpowerstation[0], observationpowerstation[1], observationpowerstation[2],
-           c="y", marker="x", zorder=13,
-           label="Power Station for Observation Station")
+# ax.scatter(observationpowerstation[0], observationpowerstation[1], observationpowerstation[2],
+#            c="y", marker="x", zorder=13,
+#            label="Power Station for Observation Station")
 
 
 o_s = np.sqrt(np.sum((observationstation-sverdrupstation)**2))
@@ -140,16 +140,18 @@ s_m = np.sqrt(np.sum((sverdrupstation-malapertstation)**2))
 m_e = np.sqrt(384400**2 + R**2)
 op_o = np.sqrt(np.sum((observationpowerstation-observationstation)**2))
 
-ax.text(sverdrupstation[0], sverdrupstation[1], sverdrupstation[2]+4,
-        "Relay line {0:.1f} [km]".format(o_s), color='w', zorder=13)
-ax.text(malapertstation[0], malapertstation[1], malapertstation[2]+4,
-        "Communication line {0:.1f} [km]".format(s_m), color='w', zorder=13)
-ax.text(earthcartisian[0], earthcartisian[1], earthcartisian[2],
-        "Earth communication line ≈ {0:.1f} [km]".format(m_e), color="w", zorder=13)
-ax.text(observationpowerstation[0], observationpowerstation[1], observationpowerstation[2]+6,
-        "Power for observation station {0:.1f} [km]".format(op_o), color="w", zorder=13)
+ax.text(sverdrupstation[0], sverdrupstation[1]-10, sverdrupstation[2],
+        "Sverdrup relay line {0:.1f} [km]".format(o_s), color='w', zorder=13)
+ax.text(malapertstation[0], malapertstation[1]-10, malapertstation[2]+4,
+        "Malapert comm. line {0:.1f} [km]".format(s_m), color='w', zorder=13)
+ax.text(earthcartisian[0]+300, earthcartisian[1]+300, earthcartisian[2]-50,
+        "Earth comm. line ≈ {0:.1f} [km]".format(m_e), color="w", zorder=13)
+ax.text(0, +100, -6,
+        "Shackleton crater", color="w", zorder=13)
+# ax.text(observationpowerstation[0], observationpowerstation[1]-10, observationpowerstation[2]+6,
+#         "Power for observation station {0:.1f} [km]".format(op_o), color="w", zorder=13)
 
-ax.legend()
+ax.legend(loc="upper left")
 
 print("Communication lines | Observation to Sverdrup rim: {0:.1f}       [km] \n"
       "                      Sverdrup rim to Malapert:    {1:.1f}      [km] \n"
@@ -158,4 +160,5 @@ print("Communication lines | Observation to Sverdrup rim: {0:.1f}       [km] \n"
                                                                           s_m,
                                                                           np.sqrt(384400**2 + R**2),
                                                                           op_o))
+ax.view_init(elev=19., azim=-166.)
 plt.show()
