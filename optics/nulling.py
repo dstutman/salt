@@ -37,4 +37,4 @@ fig.update_layout(template='simple_white', title=dict(text='Array Transmission M
 fig.add_heatmap(x=x, y=y, z=r, colorbar=dict(title='Normalized Transmittance'))
 fig.show()
 fig.write_html('out/transmission_map.html')
-fig.write_image('out/transmission_map.svg')
+fig.write_image('out/transmission_map.png')

@@ -511,18 +511,18 @@ if __name__ == '__main__':  # pragma: no cover
     vis = plot_visibility(df)
     vis.show()
     vis.write_html('out/celestial_visibility.html')
-    vis.write_image('out/celestial_visibility.svg')
+    vis.write_image('out/celestial_visibility.png')
     int_vis = plot_integration_visibility(df)
     int_vis.show()
     int_vis.write_html('out/integration_vs_distance.html')
-    int_vis.write_image('out/integration_vs_distance.svg')
+    int_vis.write_image('out/integration_vs_distance.png')
     det_dia = plot_detections_diameter(df)
     det_dia.show()
     det_dia.write_html('out/visibility_vs_diameter.html')
-    det_dia.write_image('out/visibility_vs_diameter.svg')
+    det_dia.write_image('out/visibility_vs_diameter.png')
     peaks = plot_peak_wavelengths(df)
     peaks.write_html('out/spectral_peaks.html')
-    peaks.write_image('out/spectral_peaks.svg')
+    peaks.write_image('out/spectral_peaks.png')
 
 # TODO: Port the unit test harness and achieve full coverage
 # TODO: Add all necessary plots and possible Monte-Carlos
