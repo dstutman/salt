@@ -495,6 +495,12 @@ def plot_peak_wavelengths(df):  # pragma: no cover
     return fig
 
 
+def plot_integration_histogram(df):
+    fig = gpho.Figure()
+    fig.add_histogram(x=df[df['shot_time_for_snr'] < 60*60*30]['shot_time_for_snr']/60/60)
+    return fig
+
+
 if __name__ == '__main__':  # pragma: no cover
     df = load_dataset(data_path)
     df = calculate_southern_zenith_angle(df)
@@ -504,25 +510,26 @@ if __name__ == '__main__':  # pragma: no cover
     df = calculate_local_fluxes(df)
     #df = calculate_nulling(df, 10E-6, 1000, 0, 0)
     df = force_nulling(df, 1E-5)
-    df = calculate_detections(df, 2/2, 0.5, 0.3)
+    df = calculate_detections(df, 4/2, 0.5, 0.3)
     df = calculate_shot_noise_time(df, 10, 2*pi*1.5E-9/10E-6)
-    df = determine_visibility(df, radians(60), radians(90), 60*60*10, 0)
+    df = determine_visibility(df, radians(60), radians(90), 60*60*30, 0)
     print(df['visibility'].value_counts())
     vis = plot_visibility(df)
     vis.show()
-    vis.write_html('out/celestial_visibility.html')
-    vis.write_image('out/celestial_visibility.svg')
+    #vis.write_html('out/celestial_visibility.html')
+    #vis.write_image('out/celestial_visibility.svg')
     int_vis = plot_integration_visibility(df)
     int_vis.show()
-    int_vis.write_html('out/integration_vs_distance.html')
-    int_vis.write_image('out/integration_vs_distance.svg')
+    #int_vis.write_html('out/integration_vs_distance.html')
+    #int_vis.write_image('out/integration_vs_distance.svg')
     det_dia = plot_detections_diameter(df)
     det_dia.show()
-    det_dia.write_html('out/visibility_vs_diameter.html')
-    det_dia.write_image('out/visibility_vs_diameter.svg')
+    #det_dia.write_html('out/visibility_vs_diameter.html')
+    #det_dia.write_image('out/visibility_vs_diameter.svg')
     peaks = plot_peak_wavelengths(df)
-    peaks.write_html('out/spectral_peaks.html')
-    peaks.write_image('out/spectral_peaks.svg')
+    #peaks.write_html('out/spectral_peaks.html')
+    #peaks.write_image('out/spectral_peaks.svg')
+    plot_integration_histogram(df).show()
 
 # TODO: Port the unit test harness and achieve full coverage
 # TODO: Add all necessary plots and possible Monte-Carlos
