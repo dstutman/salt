@@ -2,7 +2,7 @@
 
 mirrorDiameter = 1.5
 a = (mirrorDiameter/2)/5
-h = 32 / 1000
+h = 25.4 / 1000
 
 # material - 
 ρ = 2210
@@ -36,26 +36,29 @@ end
 
 
 function D(E,h,v)
-    return E*h^3/(12*(1-v^2))
+    return (E*h^3)/(12*(1-v^2))
 end
 
 DD = D(E,h,v)
 
-n = 1
-println("18 segments, Mirror diameter: ", mirrorDiameter, "m")
-println("r = ", a, "m E = ", E, "GPa v = ", v, " h = ", h, "m ρ = ", ρ, "kg/m^3")
-println()
-for s in 0:1:10  
-    local λ = lmbda(n, s)
-    local ω = omega(λ, a, ρ, DD)/ 2pi
-    print("ω= ")
-    print(round(ω, digits=3), "Hz")
-    print(", n=")
-    print(n)
-    print(", s=")
-    print(s)
-    println(", f_",n,"/",s)
-    """
-    YES IM A 10X Programmer
-    """
-end
+# n = 1
+# println("18 segments, Mirror diameter: ", mirrorDiameter, "m")
+# println("r = ", a, "m E = ", E, "GPa v = ", v, " h = ", h, "m ρ = ", ρ, "kg/m^3")
+# println()
+# for s in 0:1:10  
+#     local λ = lmbda(n, s)
+#     local ω = omega(λ, a, ρ, DD)/ 2pi
+#     print("ω= ")
+#     print(round(ω, digits=3), "Hz")
+#     print(", n=")
+#     print(n)
+#     print(", s=")
+#     print(s)
+#     println(", f_",n,"/",s)
+#     """
+#     YES IM A 10X Programmer
+#     """
+# end
+
+println(DD)
+println(lmbda(0,1)^2)
