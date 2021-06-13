@@ -180,14 +180,28 @@ fig, axs = plt.subplots(3,1, sharex=False)
 # axs[0].set_xscale("log")
 # axs[1].set_xscale("log")
 resonantFreq = 49.326
+maxAccelMirrors = 10
+
+
+maxRecoveryTime = 10
+for i, u in enumerate(tt0List):
+    if u < maxRecoveryTime:
+        iRecovery = i
+        break
+
+print(tt0ListList)
+print(tt0List)
 
 for index, frequency in enumerate(FreqList):
     axs[0].plot(kList, accelListList[index], label=f"CoM accel {frequency} Hz")
 axs[2].plot(FreqList, [x[0] for x in motionFreqListList], label=f"CoM frequency")
 axs[2].plot(FreqList, [resonantFreq for x in FreqList], label=f"CoM frequency")
 # axs[0].plot(kList, [surfaceAccel for x in kList], label=f"Surface accel {21} Hz")
+axs[0].plot(kList, [maxAccelMirrors for x in kList], label=f"maxAccel mirrors {maxAccelMirrors}m/s^2")
+axs[0].plot([kList[i] for x in range(2)], [x for x in (0, maxAccelMirrors)], label=f"Max recovery time ({maxRecoveryTime}s)")
 # axs[0].plot(kList, totAccelList, label="Max acceleration", color="red")
 
+axs[1].plot([kList[i] for x in range(2)], [x for x in (0, 40)], label=f"Max recovery time ({maxRecoveryTime}s)")
 axs[1].plot(kList, tt0List)
 
 axs[0].set_title(f"Acceleration")
