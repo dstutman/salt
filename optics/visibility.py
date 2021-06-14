@@ -455,6 +455,42 @@ def plot_visibility(df):  # pragma: no cover
 
     return fig
 
+def plot_visibility_flat(df): # pragma: no cover
+    fig = gpho.Figure()
+    fig.update_layout(template='simple_white', title=dict(text='Celestial Visibility', xanchor='center', x=0.5))
+
+    ## ICRS origin
+    #fig.add_scatter(x=[0], y=[0], z=[0], name='ICRS Origin', mode='markers')
+
+    ## Earth North Pole
+    #fig.add_scatter3d(x=[0], y=[0], z=[1],
+    #                  name='Earth North Pole', mode='markers')
+
+    # Moon south pole
+    fig.add_scatter(x=[lun_north_ra-pi], y=[lun_north_dec-pi], name='Moon South Pole', mode='markers')
+
+    # Objects out of Field of Regard
+    xyz_oof = df.loc[(df['visibility'] == Visibility.OUT_OF_FOR) | (df['visibility'] == Visibility.HIDDEN), ['sy_ra', 'sy_dec']]
+    fig.add_scatter(x=xyz_oof['sy_ra'], y=xyz_oof['sy_dec'],
+                      name='Out of FOR', mode='markers', opacity=1)
+
+    # Low SNR objects
+    # xyz_low = np.stack(
+    #    df.loc[df['visibility'] == Visibility.SNR_TOO_LOW, 'sy_ptvect']).T
+    # fig.add_scatter3d(x=xyz_low[0], y=xyz_low[1], z=xyz_low[2],
+    #                  name='SNR Too Low', mode='markers', opacity=0.1)
+
+    # Integration too long
+    xyz_lng = df.loc[df['visibility'] == Visibility.INT_TOO_LONG, ['sy_ra', 'sy_dec']]
+    fig.add_scatter(x=xyz_lng['sy_ra'], y=xyz_lng['sy_dec'],
+                      name='Int Too Long', mode='markers', opacity=1)
+
+    # Visible objects
+    xyz_vis = df.loc[df['visibility'] == Visibility.VISIBLE, ['sy_ra', 'sy_dec']]
+    fig.add_scatter(x=xyz_vis['sy_ra'], y=xyz_vis['sy_dec'],
+                      name='Visible', mode='markers')
+
+    return fig
 
 def plot_integration_visibility(df):  # pragma: no cover
     int_too_long = df.loc[(df['visibility'] == Visibility.VISIBLE) | (
@@ -497,7 +533,7 @@ def plot_peak_wavelengths(df):  # pragma: no cover
 
 def plot_integration_histogram(df):
     fig = gpho.Figure()
-    fig.add_histogram(x=df[df['shot_time_for_snr'] < 60*60*30]['shot_time_for_snr']/60/60)
+    fig.add_histogram(x=df[df['shot_time_for_snr'] < 60*60*10]['shot_time_for_snr']/60/60)
     return fig
 
 
@@ -510,26 +546,31 @@ if __name__ == '__main__':  # pragma: no cover
     df = calculate_local_fluxes(df)
     #df = calculate_nulling(df, 10E-6, 1000, 0, 0)
     df = force_nulling(df, 1E-5)
-    df = calculate_detections(df, 4/2, 0.5, 0.3)
+    df = calculate_detections(df, 2/2, 0.5, 0.3)
     df = calculate_shot_noise_time(df, 10, 2*pi*1.5E-9/10E-6)
-    df = determine_visibility(df, radians(60), radians(90), 60*60*30, 0)
+    df = determine_visibility(df, radians(60), radians(90), 60*60*10, 0)
     print(df['visibility'].value_counts())
     vis = plot_visibility(df)
     vis.show()
-    #vis.write_html('out/celestial_visibility.html')
-    #vis.write_image('out/celestial_visibility.svg')
+    vis.write_html('out/celestial_visibility.html')
+    vis.write_image('out/celestial_visibility.png')
+    flat_vis = plot_visibility_flat(df)
+    flat_vis.show()
+    flat_vis.write_html('out/celestial_visibility_flat.html')
+    flat_vis.write_image('out/celestial_visibility_flat.png')
     int_vis = plot_integration_visibility(df)
     int_vis.show()
-    #int_vis.write_html('out/integration_vs_distance.html')
-    #int_vis.write_image('out/integration_vs_distance.svg')
+    int_vis.write_html('out/integration_vs_distance.html')
+    int_vis.write_image('out/integration_vs_distance.png')
     det_dia = plot_detections_diameter(df)
     det_dia.show()
-    #det_dia.write_html('out/visibility_vs_diameter.html')
-    #det_dia.write_image('out/visibility_vs_diameter.svg')
+    det_dia.write_html('out/visibility_vs_diameter.html')
+    det_dia.write_image('out/visibility_vs_diameter.png')
     peaks = plot_peak_wavelengths(df)
-    #peaks.write_html('out/spectral_peaks.html')
-    #peaks.write_image('out/spectral_peaks.svg')
+    peaks.write_html('out/spectral_peaks.html')
+    peaks.write_image('out/spectral_peaks.png')
     plot_integration_histogram(df).show()
+
 
 # TODO: Port the unit test harness and achieve full coverage
 # TODO: Add all necessary plots and possible Monte-Carlos
