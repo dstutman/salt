@@ -472,8 +472,8 @@ def plot_visibility_flat(df):  # pragma: no cover
     #                  name='Earth North Pole', mode='markers')
 
     # Moon south pole
-    fig.add_scatter(x=[lun_north_ra-pi], y=[lun_north_dec-pi],
-                    name='Moon South Pole', mode='markers')
+    #fig.add_scatter(x=[lun_north_ra-pi], y=[lun_north_dec-pi],
+    #                name='Moon South Pole', mode='markers')
 
     # Objects out of Field of Regard
     xyz_oof = df.loc[(df['visibility'] == Visibility.OUT_OF_FOR) | (
@@ -610,7 +610,7 @@ if __name__ == '__main__':  # pragma: no cover
     det_area = plot_detections_area(df)
     det_area.show()
     det_area.write_html('out/visibility_vs_area.html')
-    det_area.write_html('out/visibility_vs_area.png')
+    det_area.write_image('out/visibility_vs_area.png')
     peaks = plot_peak_wavelengths(df)
     peaks.show()
     peaks.write_html('out/spectral_peaks.html')
