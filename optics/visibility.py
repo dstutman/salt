@@ -17,6 +17,7 @@ sun_radius = 695508E3  # https://solarsystem.nasa.gov/solar-system/sun/by-the-nu
 earth_radius = 6371E3  # https://solarsystem.nasa.gov/solar-system/sun/by-the-numbers/
 lun_north_ra = radians(269.9949)  # Lunar celestial north right-ascention
 lun_north_dec = radians(66.5392)  # Lunar celestial north declination
+num_mirrors = 4
 
 # Types
 
@@ -206,13 +207,14 @@ def calculate_peak_wavelength(df):
     return df
 
 
-def calculate_lowest_intensity_wavelength(df, lowest=6E-6, highest=20E-6):
+def calculate_lowest_intensity_wavelength(df, lowest=6E-6, highest=20E-6, resolution=300):
     """
     Calculate the lowest intensity wavelength in a band (m).
 
     df: The planet dataset
     lowest: The lowest wavelength in the band (m)
     highest: The highest wavelength in the band (m)
+    resolution: The spectral resolution (-)
     """
     df = df.copy()
 
@@ -222,18 +224,16 @@ def calculate_lowest_intensity_wavelength(df, lowest=6E-6, highest=20E-6):
 
     df.loc[selector, 'worst_wavelength'] = lowest
     df.loc[~selector, 'worst_wavelength'] = highest
-    df['spectral_oneband_width'] = (highest - lowest)/300
+    df['spectral_oneband_width'] = (highest - lowest)/resolution
     return df
 
 
-def calculate_emissions(df, resolution=300):
+def calculate_emissions(df):
     '''
     Calculate the emission powers of stars and planets in photons per second.
     Uses the worst case intensity band.
 
     df: The planet dataset
-    resolution: The spectral resolution (-)
-
     '''
 
     df = df.copy()
@@ -282,7 +282,8 @@ def calculate_nulling(df, baseline, phase_variance,
     df = df.copy()
 
     st_angular_diameter = 2 * df['st_rad'] / df['sy_dist']
-    st_leakage = pi**2 / 4 * (baseline * st_angular_diameter / df['worst_wavelength'])**2
+    st_leakage = pi**2 / 4 * \
+        (baseline * st_angular_diameter / df['worst_wavelength'])**2
     df['st_nulldepth'] = 1 / 4 * \
         (phase_variance + st_leakage + fractional_intensity_variance)
 
@@ -319,9 +320,10 @@ def calculate_detections(df, mirror_radius, instrument_throughput,
 
     # Calculate incident photons per second on detector
     pl_phps_incident = df['pl_phpspm2_loc'] * \
-        circle_area(mirror_radius) * instrument_throughput
+        circle_area(mirror_radius) * instrument_throughput * num_mirrors
     st_phps_incident = df['st_phpspm2_loc'] * \
-        circle_area(mirror_radius) * df['st_nulldepth'] * instrument_throughput
+        circle_area(mirror_radius) * \
+        df['st_nulldepth'] * instrument_throughput * num_mirrors
 
     if rotationally_modulated:
         pl_phps_incident *= 0.5
@@ -415,7 +417,8 @@ def determine_visibility(df, pointing_range, plotting_range, max_integration_tim
 
 def plot_visibility(df):  # pragma: no cover
     fig = gpho.Figure()
-    fig.update_layout(template='simple_white', title=dict(text='Celestial Visibility', xanchor='center', x=0.5), scene=dict(aspectmode='data', xaxis=dict(showticklabels=False), yaxis=dict(showticklabels=False), zaxis=dict(showticklabels=False)), scene_camera=dict(eye=dict(x=-0.25, y=-0.25, z=2)))
+    fig.update_layout(template='simple_white', title=dict(text='Celestial Visibility', xanchor='center', x=0.5), scene=dict(aspectmode='data', xaxis=dict(
+        showticklabels=False), yaxis=dict(showticklabels=False), zaxis=dict(showticklabels=False)), scene_camera=dict(eye=dict(x=-0.25, y=-0.25, z=2)))
 
     # ICRS origin
     fig.add_scatter3d(x=[0], y=[0], z=[0], name='ICRS Origin', mode='markers')
@@ -435,17 +438,17 @@ def plot_visibility(df):  # pragma: no cover
     fig.add_scatter3d(x=xyz_oof[0], y=xyz_oof[1], z=xyz_oof[2],
                       name='Out of FOR', mode='markers', opacity=1)
 
-    # Low SNR objects
-    # xyz_low = np.stack(
-    #    df.loc[df['visibility'] == Visibility.SNR_TOO_LOW, 'sy_ptvect']).T
-    # fig.add_scatter3d(x=xyz_low[0], y=xyz_low[1], z=xyz_low[2],
-    #                  name='SNR Too Low', mode='markers', opacity=0.1)
+    # SNR Too Low
+    snr_low = np.stack(
+        df.loc[df['visibility'] == Visibility.SNR_TOO_LOW, 'sy_ptvect']).T
+    fig.add_scatter3d(x=snr_low[0], y=snr_low[1], z=snr_low[2],
+                      name='SNR Too Low', mode='markers', opacity=1)
 
     # Integration too long
     xyz_lng = np.stack(
         df.loc[df['visibility'] == Visibility.INT_TOO_LONG, 'sy_ptvect']).T
     fig.add_scatter3d(x=xyz_lng[0], y=xyz_lng[1], z=xyz_lng[2],
-                      name='Int Too Long', mode='markers', opacity=1)
+                      name='Integration Too Long', mode='markers', opacity=1)
 
     # Visible objects
     xyz_vis = np.stack(
@@ -455,24 +458,28 @@ def plot_visibility(df):  # pragma: no cover
 
     return fig
 
-def plot_visibility_flat(df): # pragma: no cover
-    fig = gpho.Figure()
-    fig.update_layout(template='simple_white', title=dict(text='Celestial Visibility', xanchor='center', x=0.5))
 
-    ## ICRS origin
+def plot_visibility_flat(df):  # pragma: no cover
+    fig = gpho.Figure()
+    fig.update_layout(template='simple_white', title=dict(text='Celestial Visibility', xanchor='center',
+                      x=0.5), xaxis_title='Right ascention (rad)', yaxis_title='Declination (rad)')
+
+    # ICRS origin
     #fig.add_scatter(x=[0], y=[0], z=[0], name='ICRS Origin', mode='markers')
 
-    ## Earth North Pole
-    #fig.add_scatter3d(x=[0], y=[0], z=[1],
+    # Earth North Pole
+    # fig.add_scatter3d(x=[0], y=[0], z=[1],
     #                  name='Earth North Pole', mode='markers')
 
     # Moon south pole
-    fig.add_scatter(x=[lun_north_ra-pi], y=[lun_north_dec-pi], name='Moon South Pole', mode='markers')
+    fig.add_scatter(x=[lun_north_ra-pi], y=[lun_north_dec-pi],
+                    name='Moon South Pole', mode='markers')
 
     # Objects out of Field of Regard
-    xyz_oof = df.loc[(df['visibility'] == Visibility.OUT_OF_FOR) | (df['visibility'] == Visibility.HIDDEN), ['sy_ra', 'sy_dec']]
+    xyz_oof = df.loc[(df['visibility'] == Visibility.OUT_OF_FOR) | (
+        df['visibility'] == Visibility.HIDDEN), ['sy_ra', 'sy_dec']]
     fig.add_scatter(x=xyz_oof['sy_ra'], y=xyz_oof['sy_dec'],
-                      name='Out of FOR', mode='markers', opacity=1)
+                    name='Out of FOR', mode='markers', opacity=1)
 
     # Low SNR objects
     # xyz_low = np.stack(
@@ -481,23 +488,33 @@ def plot_visibility_flat(df): # pragma: no cover
     #                  name='SNR Too Low', mode='markers', opacity=0.1)
 
     # Integration too long
-    xyz_lng = df.loc[df['visibility'] == Visibility.INT_TOO_LONG, ['sy_ra', 'sy_dec']]
+    xyz_lng = df.loc[df['visibility'] ==
+                     Visibility.INT_TOO_LONG, ['sy_ra', 'sy_dec']]
     fig.add_scatter(x=xyz_lng['sy_ra'], y=xyz_lng['sy_dec'],
-                      name='Int Too Long', mode='markers', opacity=1)
+                    name='Integration Too Long', mode='markers', opacity=1)
+
+    # SNR too low
+    snr_low = df.loc[df['visibility'] ==
+                     Visibility.SNR_TOO_LOW, ['sy_ra', 'sy_dec']]
+    fig.add_scatter(x=snr_low['sy_ra'], y=snr_low['sy_dec'],
+                    name='SNR Too Low', mode='markers', opacity=1)
 
     # Visible objects
-    xyz_vis = df.loc[df['visibility'] == Visibility.VISIBLE, ['sy_ra', 'sy_dec']]
+    xyz_vis = df.loc[df['visibility'] ==
+                     Visibility.VISIBLE, ['sy_ra', 'sy_dec']]
     fig.add_scatter(x=xyz_vis['sy_ra'], y=xyz_vis['sy_dec'],
-                      name='Visible', mode='markers')
+                    name='Visible', mode='markers')
 
     return fig
+
 
 def plot_integration_visibility(df):  # pragma: no cover
     int_too_long = df.loc[(df['visibility'] == Visibility.VISIBLE) | (
         df['visibility'] == Visibility.INT_TOO_LONG), ['sy_dist', 'shot_time_for_snr']]
 
     fig = gpho.Figure()
-    fig.update_layout(template='simple_white', title=dict(text='Integration Time vs Distance', xanchor='center', x=0.5), xaxis_title='Distance (pc)', yaxis_title='Integration Time (s)')
+    fig.update_layout(template='simple_white', title=dict(text='Integration Time vs Distance',
+                      xanchor='center', x=0.5), xaxis_title='Distance (pc)', yaxis_title='Integration Time (s)')
 
     fig.update_yaxes(type='log')
     fig.add_scatter(x=int_too_long['sy_dist'],
@@ -512,28 +529,52 @@ def plot_detections_diameter(df, from_dia=0.25, to_dia=6, num_samples=100):  # p
     for idx, dia in enumerate(dias):
         df = df.copy()
 
-        df = calculate_detections(df, dia/2, 0.5, 0.3)
+        df = calculate_detections(df, dia/2, 0.5, 0.2)
         df = calculate_shot_noise_time(df, 10, 2*pi*1.5E-9/10E-6)
-        df = determine_visibility(df, radians(60), radians(90), 60*60*10, 0)
+        df = determine_visibility(df, radians(60), radians(90), 60*60*10, 10)
 
         dets[idx] = sum(df['visibility'] == Visibility.VISIBLE)
 
     fig = gpho.Figure()
-    fig.update_layout(template='simple_white', title=dict(text='Visible Planets vs Mirror Diameter', xanchor='center', x=0.5), xaxis_title='Mirror Diameter (m)', yaxis_title='Visible Planets (-)')
+    fig.update_layout(template='simple_white', title=dict(text='Visible Planets vs Mirror Diameter',
+                      xanchor='center', x=0.5), xaxis_title='Mirror Diameter (m)', yaxis_title='Visible Planets (-)')
     fig.add_scatter(x=dias, y=dets, mode='markers')
+    return fig
+
+
+def plot_detections_area(df, from_dia=0.25, to_dia=6, num_samples=100):  # pragma: no cover
+    dias = np.linspace(from_dia, to_dia, num_samples)
+    dets = np.zeros(num_samples)
+
+    for idx, dia in enumerate(dias):
+        df = df.copy()
+
+        df = calculate_detections(df, dia/2, 0.5, 0.2)
+        df = calculate_shot_noise_time(df, 10, 2*pi*1.5E-9/10E-6)
+        df = determine_visibility(df, radians(60), radians(90), 60*60*10, 10)
+
+        dets[idx] = sum(df['visibility'] == Visibility.VISIBLE)
+
+    fig = gpho.Figure()
+    fig.update_layout(template='simple_white', title=dict(text='Visible Planets vs Mirror Area',
+                      xanchor='center', x=0.5), xaxis_title='Mirror Area (m2)', yaxis_title='Visible Planets (-)')
+    fig.add_scatter(x=pi*(dias/2)**2, y=dets, mode='markers')
     return fig
 
 
 def plot_peak_wavelengths(df):  # pragma: no cover
     fig = gpho.Figure()
-    fig.update_layout(template='simple_white', title=dict(text='Spectral Peak Occurrence Rate', xanchor='center', x=0.5))
-    fig.add_histogram(x=df['peak_wavelength'])
+    fig.update_layout(template='simple_white', title=dict(text='Spectral Peak Occurrence',
+                      xanchor='center', x=0.5), xaxis_title="Wavelength (mum)", yaxis_title="Planets (-)")
+    fig.add_histogram(x=df['peak_wavelength']*1E6)
     return fig
 
 
 def plot_integration_histogram(df):
     fig = gpho.Figure()
-    fig.add_histogram(x=df[df['shot_time_for_snr'] < 60*60*10]['shot_time_for_snr']/60/60)
+    fig.update_layout(template='simple_white', title=dict(text='Integration Time Occurrence (T < 100 hours)',
+                      xanchor='center', x=0.5), xaxis_title="Time (hours)", yaxis_title="Planets (-)")
+    fig.add_histogram(x=df[df['shot_time_for_snr'] < 60*60*100]['shot_time_for_snr']/60/60)
     return fig
 
 
@@ -546,9 +587,9 @@ if __name__ == '__main__':  # pragma: no cover
     df = calculate_local_fluxes(df)
     #df = calculate_nulling(df, 10E-6, 1000, 0, 0)
     df = force_nulling(df, 1E-5)
-    df = calculate_detections(df, 2/2, 0.5, 0.3)
+    df = calculate_detections(df, 2/2, 0.5, 0.2)
     df = calculate_shot_noise_time(df, 10, 2*pi*1.5E-9/10E-6)
-    df = determine_visibility(df, radians(60), radians(90), 60*60*10, 0)
+    df = determine_visibility(df, radians(60), radians(90), 60*60*10, 10)
     print(df['visibility'].value_counts())
     vis = plot_visibility(df)
     vis.show()
@@ -566,12 +607,18 @@ if __name__ == '__main__':  # pragma: no cover
     det_dia.show()
     det_dia.write_html('out/visibility_vs_diameter.html')
     det_dia.write_image('out/visibility_vs_diameter.png')
+    det_area = plot_detections_area(df)
+    det_area.show()
+    det_area.write_html('out/visibility_vs_area.html')
+    det_area.write_html('out/visibility_vs_area.png')
     peaks = plot_peak_wavelengths(df)
+    peaks.show()
     peaks.write_html('out/spectral_peaks.html')
     peaks.write_image('out/spectral_peaks.png')
-    plot_integration_histogram(df).show()
-
-
+    int_hist = plot_integration_histogram(df)
+    int_hist.show()
+    int_hist.write_html('out/integration_time_histogram.html')
+    int_hist.write_image('out/integration_time_histogram.png')
 # TODO: Port the unit test harness and achieve full coverage
 # TODO: Add all necessary plots and possible Monte-Carlos
 # TODO: Add plot details like titles and axis names
