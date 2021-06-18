@@ -1,9 +1,10 @@
 from matplotlib import pyplot as plt
 import numpy as np
-from math import radians,cos
+from math import radians, cos
+import scipy.optimize as sp
 
 class solar_cell():
-    def __init__(self):
+    def __init__(self, i):
         # all the properties of the used solar cell
         self.emiss = 0.85
         self.absor = 0.91
@@ -12,10 +13,12 @@ class solar_cell():
         self.DVmpdt = -0.009  # V/K
         self.DImpdt = 0.00007  # A/K
         self.area = 30.18*10**-4  # m**2
+        self.i = i  # incidence angle in radians
+        self.pack_e =0.95
 
-    def num_cells(self, Req_power, T):
+    def num_cells(self, T):
 
-        return Req_power/self.cell_power(T)
+        return self.P_req/self.cell_power(T)
 
     def cell_power(self, T): #temp in kelvin
         Vmp_new = self.Vmp + (self.DVmpdt*(T-(273.15+25)))
@@ -25,36 +28,51 @@ class solar_cell():
 
     def rad_Q(self, T):
         stef_boltz = 5.67*10**(-8)
-        Total_A = self.num_cells(P_req, T) * self.area
+        Total_A = self.num_cells(T) * self.area
 
-        return self.emiss*stef_boltz*T**4*Total_A*2
+        return self.emiss*stef_boltz*T**4*Total_A/self.pack_e*2
 
-    def power_ab(self,P_req,T, Js, i):
-        Total_A = self.num_cells(P_req, T)*self.area
+    def power_ab(self, T):
+        Total_A = self.num_cells(T)*self.area
 
-        return self.absor*Js*Total_A* cos(i)
+        return self.absor*self.solar*Total_A/self.pack_e * cos(self.i)
+    
+    def solar_incidence(self, Js):
+        self.solar = Js
 
-P_req = 728 # W, check if this is updated power required
-i = radians(10)  #  incidence angle
-Js = 1367  # Solar incidence W/m^2
+    def power_req(self, P_req):
+        self.P_req = P_req
 
-cell = solar_cell()
+    def Q_dif(self, T):
+        Qab = self.power_ab(T)
+        Qe = cell.rad_Q(T) + self.P_req
 
-step_max = 1  # K
-Qdif = 10**6
-## Min Q difference
+        return abs(Qab-Qe)
 
-for s in range(5000):
-    T = 100 + s/10
-    Qab = cell.power_ab(P_req, T, Js, i)
-    rad = cell.rad_Q(T)
-    Qe = cell.rad_Q(T) +  P_req
+    def to_root(self, T):
+        return self.power_ab(T)-self.rad_Q(T) - self.P_req
 
-    if abs(Qab-Qe) < Qdif:
-        Qdif = abs(Qab-Qe)
-        Ncell = cell.num_cells(P_req, T)
-        Teq = T
+        
+P_req = 1672.19  # W, check if this is updated power required
+i = radians(5)  # incidence angle
+Jsmin = 1321  # max solar incidence W/m^2
+Jsavg =  1367  # average solar incidence W/m^2
+Jsmax = 1412  # min solar incidence W/m^2
 
-print(Qdif)
-print(Ncell)
-print(Teq)
+Js = Jsmax
+cell = solar_cell(i)
+
+
+for Js in [Jsmin, Jsavg, Jsmax]:
+    print("Solar incidence = ", Js)
+    cell.solar_incidence(Js)
+    cell.power_req(P_req)
+
+    Teq = sp.root(cell.to_root, [1600])
+
+    print("Error heat = ", Teq.qtf[0])
+    print("Number cells = ", cell.num_cells(Teq.x[0]))
+    print("Area = ", cell.num_cells(Teq.x[0])*cell.area/cell.pack_e)
+    print("Temperature equilibrium = ", Teq.x[0])
+    print("Efficiency = ",  P_req/cell.power_ab(Teq.x[0]))
+    print()
