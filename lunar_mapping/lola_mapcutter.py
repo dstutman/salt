@@ -3,8 +3,7 @@ import pandas as pd
 
 skip = 3000
 
-CSV = r"C:\Users\noutb\PycharmProjects\LR\bsc-y3-q4\DSE\data\lolaRDR_largelarge\lolatopo_lat_182.0_235.0_long_-89.5_-86.0"
-
+CSV = r"C:\Users\noutb\PycharmProjects\LR\bsc-y3-q4\DSE\data\sverdrupxl\lolatopo_lat_175.3_226.7_long_-90.0_-85.5"
 df = pd.read_csv(CSV)
 
 long = np.array([np.min(df["Pt_Long"]), np.max(df["Pt_Long"])])

@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
 
-skip = 6000
+skip = 3000
 
-CSV = r"C:\Users\noutb\PycharmProjects\LR\bsc-y3-q4\DSE\data\malapert\LolaRDR_-87N-84N_356E27E_20210601T022034657_pts_csv.csv"
+CSV = r"C:\Users\noutb\PycharmProjects\LR\bsc-y3-q4\DSE\data\sverdrupxxl\LolaRDR_-90N-88N_175E235E_20210615T032611348_pts_csv.csv"
 
 df = pd.read_csv(CSV)
 df.columns = np.char.strip(np.array(df.columns, dtype="<U7"))
