@@ -23,26 +23,28 @@ plot = True
 animate = True
 save = False
 
-maxAmplitude = 0.02  # [m]
+maxAmplitude = 0.1  # [m]
 # baseFreq = 0.1
 
-m = 1500/2
+m = 1750
 J = 125 # = 56.55cos(11deg) + 70.3cos(11deg) (ixx+iyy)
 
-l1 = 0.85
+l1 = 0.9
 l2 = 0
 l3 = -l1
 
 kRover = 1000000000
 
 # k2 must be less than 40*k1 or 40*k2 
-k1 = 200
-k2 = 200
-k3 = 200
+k1 = 6000*2
+k2 = 6000*2
+k3 = 6000*2
 
-c1 = 0.99*m
-c2 = 0.99*m
-c3 = 0.99*m
+c1 = m * 0.95 * 3
+c2 = m * 0.95 * 3
+c3 = m * 0.95 * 3
+
+print(f"c1,c2,c3 = {c1}")
 
 print(f"Keq = {k1+k2+k3}")
 print(f"Ceq = {1/((1/c1)+(1/c2)+(1/c3))}")
@@ -160,7 +162,7 @@ axs[1, 1].plot(T, angvel, label="ang velocity", color="tab:blue")
 accelAx.plot(T[500::], surfaceAccel[500::], label="surface accelleration", color="orange")
 accelAx.plot(T[500::], totalAccelleration[500::], label="max accelleration", color="r")
 accelAx.plot(T[500::], accel[500::], label="accelleration", color="g")
-accelAx.scatter(tips, [accel[500::][int(x/1000)] for x in tips], label="tips", color="r")
+# accelAx.scatter(tips, [accel[500::][int(x/1000)] for x in tips], label="tips", color="r")
 
 axs[0, 0].legend(loc="lower right")
 axs[0, 1].legend(loc="lower right")
