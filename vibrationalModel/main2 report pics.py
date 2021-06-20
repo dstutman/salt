@@ -9,7 +9,7 @@ from tipfinder import tipfinder, getFreq
 
 s = np.sign
 
-Tmax = 15
+Tmax = 1
 stopLinear = Tmax
 stopToZero = Tmax
 randomFreq=0
@@ -136,93 +136,40 @@ angvelRads = list(np.round(yout[3], 15))
 angAccelRads = (np.gradient(angvelRads)/timestep)
 totalAccelleration = -(angAccelRads * (bodyWidth/2)) + accel
 
-tips = tipfinder(accel[500:])
-calcFreq = getFreq(accel[500:])
-print(f"Freq = {round(calcFreq, 3)} Hz")
-print(f"Max accel = {round(max(accel), 3)}")
+# tips = tipfinder(accel[500:])
+# calcFreq = getFreq(accel[500:])
+# print(f"Freq = {round(calcFreq, 3)} Hz")
+# print(f"Max accel = {round(max(accel), 3)}")
 
 ### Plotting
-fig, axs = plt.subplots(2, 2)
-accelFig, accelAx = plt.subplots(1, 1)
+fig, axs = plt.subplots(3, 1, sharex=True, figsize=(6,7))
+# accelFig, accelAx = plt.subplots(1, 1)
 
-fig.suptitle(f"m={round(m, 3)},k1={round(k1, 3)}, c1={round(c1, 3)}, c1/m={round(c1/m,3)}, freq={round(baseFreq, 3)}[rad/s]/{round(baseFreqHz, 3)}[Hz]")
-accelFig.suptitle("Acceleration")
-axs[0, 0].plot(T, waveW1[0], label="moonquake displacement w1", linestyle="--", color="orange")
-axs[0, 0].plot(T, dis, label="displacement", color="tab:blue")
+# fig.suptitle(f"K = 6000 f = ")
+# fig.suptitle(f"m={round(m, 3)},k1={round(k1, 3)}, c1={round(c1, 3)}, c1/m={round(c1/m,3)}, freq={round(baseFreq, 3)}[rad/s]/{round(baseFreqHz, 3)}[Hz]")
+fig.suptitle(f"Frequency {baseFreqHz} Hz")
+axs[0].plot(T, waveW1[0], label="moonquake displacement", linestyle="--", color="orange")
+axs[0].plot(T, dis, label="displacement", color="tab:blue")
 
-axs[0, 1].plot(T, waveW1[1], label="moonquake velocity w1", linestyle="--", color="orange")
-axs[0, 1].plot(T, vel, label="velocity", color="tab:blue")
+axs[1].plot(T, waveW1[1], label="moonquake velocity", linestyle="--", color="orange")
+axs[1].plot(T, vel, label="velocity", color="tab:blue")
+axs[2].plot(T, surfaceAccel, label="moonquake acceleration", linestyle="--", color="orange")
+axs[2].plot(T, accel, label="acceleration", color="tab:blue")
 # axs[0, 1].plot(T[100::], (np.gradient(dis)/timestep)[100::], label="test vello") # verifying the acceleration graph
 
-axs[1, 0].plot(T, angdis, label="ang displacement", color="tab:blue")
+axs[2].set_xlabel("Time [s]")
 
-axs[1, 1].plot(T[500::], angAccell[500::], label="ang accelleration", color="g")
-axs[1, 1].plot(T, angvel, label="ang velocity", color="tab:blue")
+axs[0].set_ylabel("Displacement [m]")
+axs[1].set_ylabel("Velocity [m/s]")
+axs[2].set_ylabel("Acceleration [m/s^2]")
 
-accelAx.plot(T[500::], surfaceAccel[500::], label="surface accelleration", color="orange")
-accelAx.plot(T[500::], totalAccelleration[500::], label="max accelleration", color="r")
-accelAx.plot(T[500::], accel[500::], label="accelleration", color="g")
-# accelAx.scatter(tips, [accel[500::][int(x/1000)] for x in tips], label="tips", color="r")
+axs[0].grid()
+axs[1].grid()
+axs[2].grid()
 
-axs[0, 0].legend(loc="lower right")
-axs[0, 1].legend(loc="lower right")
-axs[1, 0].legend(loc="lower right")
-axs[1, 1].legend(loc="lower right")
-accelAx.legend(loc="lower right")
+axs[0].legend(loc=4)
+axs[1].legend(loc=4)
+axs[2].legend(loc=4)
 
-axs[0, 0].grid()
-axs[0, 1].grid()
-axs[1, 0].grid()
-axs[1, 1].grid()
-accelAx.grid()
-
-fig.tight_layout()
-accelFig.tight_layout()
-
-### Animations
-if animate:
-    anm, anfig = plt.subplots(1, 1, figsize=(6, 6))
-
-    llen = 1.2 # length of lines
-    llen2 = -1.2
-    llline1, = anfig.plot( [0, llen*math.cos(math.radians(0))], [0, llen*math.sin(math.radians(0))], "k-", lw=2)
-    llline2, = anfig.plot( [0, llen2*math.cos(math.radians(0))], [0, llen2*math.sin(math.radians(0))], "k-", lw=2)
-
-    cgDot, = anfig.plot([0], [0], 'ro')
-    cgOrigin, = anfig.plot([0], [0], 'g2')
-
-    l1, l2, l3 = -l1, -l2, -l3 #original coordinate system is mirrored in up axis
-
-    w1, = anfig.plot([l1], [-0.5], 'ro')
-    w2, = anfig.plot([l2], [-0.5], 'go')
-    w3, = anfig.plot([l3], [-0.5], 'bo')
-    ow1, = anfig.plot([l1], [-0.5], 'b2')
-    ow2, = anfig.plot([l2], [-0.5], 'r2')
-    ow3, = anfig.plot([l3], [-0.5], 'g2')
-
-    anfig.set_xlim([-1.5,1.5])
-    anfig.set_ylim([-1.5,1.5])
-
-    def animate(i):
-        cgDot.set_data(0, dis[int(i*1000)])
-
-        w1.set_data(l1, waveW1[0][int(i*1000)]-0.5 + bump1)
-        w2.set_data(l2, waveW2[0][int(i*1000)]-0.5 + bump2)
-        w3.set_data(l3, waveW3[0][int(i*1000)]-0.5 + bump3)
-
-        llline1.set_data([0, llen*math.cos(math.radians(-1*angdis[int(i*0)]))],
-                        [dis[int(i*1000)], llen * math.sin(math.radians(-1*angdis[int(i*1000)]))+dis[int(i*1000)]])
-
-        llline2.set_data([0, llen2*math.cos(math.radians(-1*angdis[int(i*0)]))],
-                        [dis[int(i*1000)], llen2 * math.sin(math.radians(-1*angdis[int(i*1000)]))+dis[int(i*1000)]])
-
-        anfig.set_title(f"{round(i,3)}s")
-
-        return cgDot, w1, w2, w3, llline1, llline2
-
-    anim = FuncAnimation(anm, animate, frames=T[::10], interval=1, blit=True, repeat=True)
-
-    if save:
-        anim.save(f"animations/021.mp4", fps=120, extra_args=['-vcodec', 'libx264'], dpi=200)
 if plot:
     plt.show()
