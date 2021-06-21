@@ -461,8 +461,7 @@ def plot_visibility(df):  # pragma: no cover
 
 def plot_visibility_flat(df):  # pragma: no cover
     fig = gpho.Figure()
-    fig.update_layout(template='simple_white', title=dict(text='Celestial Visibility', xanchor='center',
-                      x=0.5), xaxis_title='Right ascention (rad)', yaxis_title='Declination (rad)')
+    fig.update_layout(template='simple_white', xaxis_title='Right ascention (rad)', yaxis_title='Declination (rad)')
 
     # ICRS origin
     #fig.add_scatter(x=[0], y=[0], z=[0], name='ICRS Origin', mode='markers')
@@ -513,8 +512,7 @@ def plot_integration_visibility(df):  # pragma: no cover
         df['visibility'] == Visibility.INT_TOO_LONG), ['sy_dist', 'shot_time_for_snr']]
 
     fig = gpho.Figure()
-    fig.update_layout(template='simple_white', title=dict(text='Integration Time vs Distance',
-                      xanchor='center', x=0.5), xaxis_title='Distance (pc)', yaxis_title='Integration Time (s)')
+    fig.update_layout(template='simple_white', xaxis_title=r'Distance [$pc$]', yaxis_title=r'Integration Time [$s$]')
 
     fig.update_yaxes(type='log')
     fig.add_scatter(x=int_too_long['sy_dist'],
@@ -536,8 +534,7 @@ def plot_detections_diameter(df, from_dia=0.25, to_dia=6, num_samples=100):  # p
         dets[idx] = sum(df['visibility'] == Visibility.VISIBLE)
 
     fig = gpho.Figure()
-    fig.update_layout(template='simple_white', title=dict(text='Visible Planets vs Mirror Diameter',
-                      xanchor='center', x=0.5), xaxis_title='Mirror Diameter (m)', yaxis_title='Visible Planets (-)')
+    fig.update_layout(template='simple_white', xaxis_title=r'Mirror Diameter [$m$]', yaxis_title=r'Visible Planets [$pl$]')
     fig.add_scatter(x=dias, y=dets, mode='markers')
     return fig
 
@@ -556,24 +553,21 @@ def plot_detections_area(df, from_dia=0.25, to_dia=6, num_samples=100):  # pragm
         dets[idx] = sum(df['visibility'] == Visibility.VISIBLE)
 
     fig = gpho.Figure()
-    fig.update_layout(template='simple_white', title=dict(text='Visible Planets vs Mirror Area',
-                      xanchor='center', x=0.5), xaxis_title='Mirror Area (m2)', yaxis_title='Visible Planets (-)')
+    fig.update_layout(template='simple_white', xaxis_title=r'Mirror Area [$m^2$]', yaxis_title=r'Visible Planets [$pl$]')
     fig.add_scatter(x=pi*(dias/2)**2, y=dets, mode='markers')
     return fig
 
 
 def plot_peak_wavelengths(df):  # pragma: no cover
     fig = gpho.Figure()
-    fig.update_layout(template='simple_white', title=dict(text='Spectral Peak Occurrence',
-                      xanchor='center', x=0.5), xaxis_title="Wavelength (mum)", yaxis_title="Planets (-)")
+    fig.update_layout(template='simple_white', xaxis_title=r'Wavelength [$mum$]', yaxis_title=r'Planets [$pl$]')
     fig.add_histogram(x=df['peak_wavelength']*1E6)
     return fig
 
 
 def plot_integration_histogram(df):
     fig = gpho.Figure()
-    fig.update_layout(template='simple_white', title=dict(text='Integration Time Occurrence (T < 100 hours)',
-                      xanchor='center', x=0.5), xaxis_title="Time (hours)", yaxis_title="Planets (-)")
+    fig.update_layout(template='simple_white', xaxis_title=r'Time [$hrs$]', yaxis_title=r'Planets [$pl$]')
     fig.add_histogram(x=df[df['shot_time_for_snr'] < 60*60*100]['shot_time_for_snr']/60/60)
     return fig
 
