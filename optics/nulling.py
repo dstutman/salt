@@ -38,7 +38,7 @@ y *= to_mas
 fig = gpho.Figure()
 
 # Celestial sphere is 2d manifold
-fig.update_layout(template='simple_white', xaxis_title='x (mas)', yaxis_title='y (mas)')
+fig.update_layout(template='simple_white', xaxis_title=r'$\text{x}\: [mas]$', yaxis_title=r'$\text{y}\: [mas]$')
 fig.add_heatmap(x=x, y=y, z=r, colorbar=dict(title='Normalized Transmittance'))
 fig.add_scatter(x=xt, y=yt)
 fig.add_shape(type='circle', x0=-1, x1=1, y0=-1, y1=1, fillcolor='orange', opacity=1)
