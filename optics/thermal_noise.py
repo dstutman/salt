@@ -3,8 +3,8 @@ from visibility import plancks_law, photon_energy
 import plotly.graph_objects as gpho
 
 wavelengths = np.linspace(6E-6, 20E-6)
-emissions_ten = plancks_law(wavelengths, 10)/photon_energy(wavelengths) * 1E6
-emissions_forty = plancks_law(wavelengths, 40)/photon_energy(wavelengths) * 1E6
+emissions_ten = plancks_law(wavelengths, 10)/photon_energy(wavelengths)
+emissions_forty = plancks_law(wavelengths, 40)/photon_energy(wavelengths)
 
 fig = gpho.Figure()
 fig.update_layout(template='simple_white', xaxis_title=r'$\text{Wavelength}\: [\mu m]$', yaxis_title=r'$\text{Intensity}\: [ph/(m^2 \cdot \mu m \cdot sr)]$')
