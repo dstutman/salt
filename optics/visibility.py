@@ -417,7 +417,7 @@ def determine_visibility(df, pointing_range, plotting_range, max_integration_tim
 
 def plot_visibility(df):  # pragma: no cover
     fig = gpho.Figure()
-    fig.update_layout(template='simple_white', scene=dict(aspectmode='data', xaxis=dict(
+    fig.update_layout(template='seaborn', scene=dict(aspectmode='data', xaxis=dict(
         showticklabels=False), yaxis=dict(showticklabels=False), zaxis=dict(showticklabels=False)), scene_camera=dict(eye=dict(x=-0.25, y=-0.25, z=2)))
 
     # ICRS origin
@@ -461,7 +461,7 @@ def plot_visibility(df):  # pragma: no cover
 
 def plot_visibility_flat(df):  # pragma: no cover
     fig = gpho.Figure()
-    fig.update_layout(template='simple_white', xaxis_title=r'$\text{Right ascention}\: [rad]$', yaxis_title=r'$\text{Declination}\: [rad]$')
+    fig.update_layout(template='seaborn', xaxis_title=r'$\text{Right ascention}\: [rad]$', yaxis_title=r'$\text{Declination}\: [rad]$')
 
     # ICRS origin
     #fig.add_scatter(x=[0], y=[0], z=[0], name='ICRS Origin', mode='markers')
@@ -478,7 +478,7 @@ def plot_visibility_flat(df):  # pragma: no cover
     xyz_oof = df.loc[(df['visibility'] == Visibility.OUT_OF_FOR) | (
         df['visibility'] == Visibility.HIDDEN), ['sy_ra', 'sy_dec']]
     fig.add_scatter(x=xyz_oof['sy_ra'], y=xyz_oof['sy_dec'],
-                    name='Out of FOR', mode='markers', opacity=1)
+                    name='Out of FOR', mode='markers', marker_symbol='square', marker_color='red', opacity=1)
 
     # Low SNR objects
     # xyz_low = np.stack(
@@ -490,19 +490,19 @@ def plot_visibility_flat(df):  # pragma: no cover
     xyz_lng = df.loc[df['visibility'] ==
                      Visibility.INT_TOO_LONG, ['sy_ra', 'sy_dec']]
     fig.add_scatter(x=xyz_lng['sy_ra'], y=xyz_lng['sy_dec'],
-                    name='Integration Too Long', mode='markers', opacity=1)
+                    name='Integration Too Long', mode='markers', marker_symbol='diamond', marker_color='yellow', opacity=1)
 
     # SNR too low
     snr_low = df.loc[df['visibility'] ==
                      Visibility.SNR_TOO_LOW, ['sy_ra', 'sy_dec']]
     fig.add_scatter(x=snr_low['sy_ra'], y=snr_low['sy_dec'],
-                    name='SNR Too Low', mode='markers', opacity=1)
+                    name='SNR Too Low', mode='markers', marker_symbol='pentagon', marker_color='orange', opacity=1)
 
     # Visible objects
     xyz_vis = df.loc[df['visibility'] ==
                      Visibility.VISIBLE, ['sy_ra', 'sy_dec']]
     fig.add_scatter(x=xyz_vis['sy_ra'], y=xyz_vis['sy_dec'],
-                    name='Visible', mode='markers')
+                    name='Visible', mode='markers', marker_symbol='star', marker_color='green')
 
     return fig
 
@@ -512,7 +512,7 @@ def plot_integration_visibility(df):  # pragma: no cover
         df['visibility'] == Visibility.INT_TOO_LONG), ['sy_dist', 'shot_time_for_snr']]
 
     fig = gpho.Figure()
-    fig.update_layout(template='simple_white', xaxis_title=r'$\text{Distance}\: [pc]$', yaxis_title=r'$\text{Integration Time}\: [s]$')
+    fig.update_layout(template='seaborn', xaxis_title=r'$\text{Distance}\: [pc]$', yaxis_title=r'$\text{Integration Time}\: [s]$')
 
     fig.update_yaxes(type='log')
     fig.add_scatter(x=int_too_long['sy_dist'],
@@ -534,7 +534,7 @@ def plot_detections_diameter(df, from_dia=0.25, to_dia=6, num_samples=100):  # p
         dets[idx] = sum(df['visibility'] == Visibility.VISIBLE)
 
     fig = gpho.Figure()
-    fig.update_layout(template='simple_white', xaxis_title=r'$\text{Mirror Diameter}\: [m]$', yaxis_title=r'$\text{Visible Planets}\: [pl]$')
+    fig.update_layout(template='seaborn', xaxis_title=r'$\text{Mirror Diameter}\: [m]$', yaxis_title=r'$\text{Visible Planets}\: [pl]$')
     fig.add_scatter(x=dias, y=dets, mode='markers')
     return fig
 
@@ -553,21 +553,21 @@ def plot_detections_area(df, from_dia=0.25, to_dia=6, num_samples=100):  # pragm
         dets[idx] = sum(df['visibility'] == Visibility.VISIBLE)
 
     fig = gpho.Figure()
-    fig.update_layout(template='simple_white', xaxis_title=r'$\text{Mirror Area}\: [m^2]$', yaxis_title=r'$\text{Visible Planets}\: [pl]$')
+    fig.update_layout(template='seaborn', xaxis_title=r'$\text{Mirror Area}\: [m^2]$', yaxis_title=r'$\text{Visible Planets}\: [pl]$')
     fig.add_scatter(x=pi*(dias/2)**2, y=dets, mode='markers')
     return fig
 
 
 def plot_peak_wavelengths(df):  # pragma: no cover
     fig = gpho.Figure()
-    fig.update_layout(template='simple_white', xaxis_title=r'$\text{Wavelength}\: [\mu m]$', yaxis_title=r'$\text{Planets}\: [pl]$')
+    fig.update_layout(template='seaborn', xaxis_title=r'$\text{Wavelength}\: [\mu m]$', yaxis_title=r'$\text{Planets}\: [pl]$')
     fig.add_histogram(x=df['peak_wavelength']*1E6)
     return fig
 
 
 def plot_integration_histogram(df):
     fig = gpho.Figure()
-    fig.update_layout(template='simple_white', xaxis_title=r'$\text{Time}\: [hrs]$', yaxis_title=r'$\text{Planets}\: [pl]$')
+    fig.update_layout(template='seaborn', xaxis_title=r'$\text{Time}\: [hrs]$', yaxis_title=r'$\text{Planets}\: [pl]$')
     fig.add_histogram(x=df[df['shot_time_for_snr'] < 60*60*100]['shot_time_for_snr']/60/60)
     return fig
 
